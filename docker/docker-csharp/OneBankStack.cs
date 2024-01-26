@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Pulumi;
 using Docker = Pulumi.Docker;
 
@@ -6,6 +5,7 @@ class OneBankStack: Stack
 {
     public OneBankStack()
     {
+        var tag = "0.0.1-SNAPSHOT";
         var containerLabels = new ContainerLabelBuilder().ContainerLabels;
 
         var assessmentManagamentNetwork = new Docker.Network("AssessmentManagementNetwork", new Docker.NetworkArgs
@@ -28,10 +28,6 @@ class OneBankStack: Stack
         {
             Name = "onebank/ApiGatewayNetwork"
         });
-        var publicNetwork = new Docker.Network("OneBank_PublicNetwork", new Docker.NetworkArgs
-        {
-            Name = "onebank/PublicNetwork"
-        });
 
 
         var mariaDbImage = new Docker.RemoteImage("MariaDb_Image", new Docker.RemoteImageArgs
@@ -41,37 +37,32 @@ class OneBankStack: Stack
         });
         var serviceDiscoveryImage = new Docker.RemoteImage("OneBank_ServiceDiscovery_Image", new Docker.RemoteImageArgs
         {
-            Name = "psharpx/sfit-servicediscovery:latest",
+            Name = $"psharpx/sfit-servicediscovery:{tag}",
             KeepLocally = true
         });
         var apiGatewayImage = new Docker.RemoteImage("OneBank_APIGateway_Image", new Docker.RemoteImageArgs
         {
-            Name = "psharpx/sfit-apigateway:latest",
+            Name = $"psharpx/sfit-apigateway:{tag}",
             KeepLocally = true
         });
         var mlTrackClassifierImage = new Docker.RemoteImage("OneBank_MlTrackClassifier_Image", new Docker.RemoteImageArgs
         {
-            Name = "psharpx/sfit-ml-track-suggestion-api:latest",
+            Name = "psharpx/sfit-ml-track-suggestion-api:0.0.1",
             KeepLocally = true
         });
         var trackSuggestionImage = new Docker.RemoteImage("OneBank_TrackSuggestionAPI_Image", new Docker.RemoteImageArgs
         {
-            Name = "psharpx/sfit-track-suggestion-api:latest",
+            Name = $"psharpx/sfit-track-suggestion-api:{tag}",
             KeepLocally = true
         });
         var assessmentManagementImage = new Docker.RemoteImage("OneBank_AssessmentManagementAPI_Image", new Docker.RemoteImageArgs
         {
-            Name = "psharpx/sfit-assessment-management-api:latest",
+            Name = $"psharpx/sfit-assessment-management-api:{tag}",
             KeepLocally = true
         });
         var discoveryApiImage = new Docker.RemoteImage("OneBank_DiscoveryAPI_Image", new Docker.RemoteImageArgs
         {
-            Name = "psharpx/sfit-discovery-api:latest",
-            KeepLocally = true
-        });
-        var swaggerImage = new Docker.RemoteImage("SwaggerUI_Image", new Docker.RemoteImageArgs
-        {
-            Name = "swaggerapi/swagger-ui:latest",
+            Name = $"psharpx/sfit-discovery-api:{tag}",
             KeepLocally = true
         });
 
@@ -91,9 +82,9 @@ class OneBankStack: Stack
             Labels = containerLabels,
             Envs = new InputList<string> 
             {
-                "MARIADB_USER_FILE=/run/secrets/db_user",
-                "MARIADB_PASSWORD_FILE=/run/secrets/db_password",
-                "MARIADB_ROOT_PASSWORD_FILE=/run/secrets/db_password",
+                "MARIADB_USER=sfit-user",
+                "MARIADB_PASSWORD=sfit-pass",
+                "MARIADB_ROOT_PASSWORD=sfit-pass",
                 "MARIADB_DATABASE=sfit-assessment-db",
             },
             NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
@@ -119,9 +110,9 @@ class OneBankStack: Stack
             Labels = containerLabels,
             Envs = new InputList<string> 
             {
-                "MARIADB_USER_FILE=/run/secrets/db_user",
-                "MARIADB_PASSWORD_FILE=/run/secrets/db_password",
-                "MARIADB_ROOT_PASSWORD_FILE=/run/secrets/db_password",
+                "MARIADB_USER=sfit-user",
+                "MARIADB_PASSWORD=sfit-pass",
+                "MARIADB_ROOT_PASSWORD=sfit-pass",
                 "MARIADB_DATABASE=sfit-track-db",
             },
             NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
@@ -147,9 +138,9 @@ class OneBankStack: Stack
             Labels = containerLabels,
             Envs = new InputList<string> 
             {
-                "MARIADB_USER_FILE=/run/secrets/db_user",
-                "MARIADB_PASSWORD_FILE=/run/secrets/db_password",
-                "MARIADB_ROOT_PASSWORD_FILE=/run/secrets/db_password",
+                "MARIADB_USER=sfit-user",
+                "MARIADB_PASSWORD=sfit-pass",
+                "MARIADB_ROOT_PASSWORD=sfit-pass",
                 "MARIADB_DATABASE=sfit-business-db",
             },
             NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
@@ -186,7 +177,125 @@ class OneBankStack: Stack
                 }
             }
         });
-        
+        var  mlTrackClassifierContainer = new Docker.Container("OneBank_MlTrackClassifier_Container", new Docker.ContainerArgs
+        {
+            Image = mlTrackClassifierImage.RepoDigest,
+            Hostname = "track.classifier.sfit.pe",
+            Restart = "always",
+            Labels = containerLabels,
+            NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
+            {
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = trackSuggestionNetwork.Name
+                }
+            }
+        });
+        var  assessmentManagementContainer = new Docker.Container("OneBank_AssessmentManagement_Container", new Docker.ContainerArgs
+        {
+            Image = assessmentManagementImage.RepoDigest,
+            Hostname = "assessment.sfit.pe",
+            Restart = "always",
+            Labels = containerLabels,
+            Envs = new InputList<string> 
+            {
+                "SPRING_PROFILES_ACTIVE=test",
+                "DATABASE_HOSTNAME=assessment.database.sfit.pe",
+                "DATABASE_NAME=sfit-assessment-db",
+                "SPRING_DATASOURCE_USERNAME=sfit-user",
+                "SPRING_DATASOURCE_PASSWORD=sfit-pass",
+                "SERVICEDISCOVERY_HOSTNAME=servicediscovery.sfit.pe"
+            },
+            NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
+            {
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = serviceDiscoveyNetwork.Name
+                },
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = assessmentManagamentNetwork.Name
+                }
+            }
+        }, new CustomResourceOptions
+        {
+            DependsOn = new InputList<Resource>
+            {
+                assessmentManagementDbContainer,
+                serviceDiscoveryContainer
+            }
+        });
+        var  trackSuggestionContainer = new Docker.Container("OneBank_TrackSuggestion_Container", new Docker.ContainerArgs
+        {
+            Image = trackSuggestionImage.RepoDigest,
+            Hostname = "track.sfit.pe",
+            Restart = "always",
+            Labels = containerLabels,
+            Envs = new InputList<string> 
+            {
+                "SPRING_PROFILES_ACTIVE=test",
+                "DATABASE_HOSTNAME=track.database.sfit.pe",
+                "DATABASE_NAME=sfit-track-db",
+                "SPRING_DATASOURCE_USERNAME=sfit-user",
+                "SPRING_DATASOURCE_PASSWORD=sfit-pass",
+                "SERVICEDISCOVERY_HOSTNAME=servicediscovery.sfit.pe",
+                "TRACKCLASSIFIER_HOSTNAME=track.classifier.sfit.pe",
+                "TRACKCLASSIFIER_PORT=80"
+            },
+            NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
+            {
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = serviceDiscoveyNetwork.Name
+                },
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = trackSuggestionNetwork.Name
+                }
+            }
+        }, new CustomResourceOptions
+        {
+            DependsOn = new InputList<Resource>
+            {
+                trackSuggestionDbContainer,
+                serviceDiscoveryContainer,
+                mlTrackClassifierContainer,
+            }
+        });
+        var  discoveryContainer = new Docker.Container("OneBank_DiscoveryAPI_Container", new Docker.ContainerArgs
+        {
+            Image = discoveryApiImage.RepoDigest,
+            Hostname = "business.sfit.pe",
+            Restart = "always",
+            Labels = containerLabels,
+            Envs = new InputList<string> 
+            {
+                "SPRING_PROFILES_ACTIVE=test",
+                "DATABASE_HOSTNAME=business.database.sfit.pe",
+                "DATABASE_NAME=sfit-business-db",
+                "SPRING_DATASOURCE_USERNAME=sfit-user",
+                "SPRING_DATASOURCE_PASSWORD=sfit-pass",
+                "SERVICEDISCOVERY_HOSTNAME=servicediscovery.sfit.pe"
+            },
+            NetworksAdvanced = new InputList<Docker.Inputs.ContainerNetworksAdvancedArgs>
+            {
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = serviceDiscoveyNetwork.Name
+                },
+                new Docker.Inputs.ContainerNetworksAdvancedArgs
+                {
+                    Name = discoveryNetwork.Name
+                }
+            }
+        }, new CustomResourceOptions
+        {
+            DependsOn = new InputList<Resource>
+            {
+                discoveryDbContainer,
+                serviceDiscoveryContainer,
+            }
+        });
         var  apiGatewayContainer = new Docker.Container("OneBank_APIGateway_Container", new Docker.ContainerArgs
         {
             Image = apiGatewayImage.RepoDigest,
@@ -231,10 +340,16 @@ class OneBankStack: Stack
             }
         }, new CustomResourceOptions
         {
-            DependsOn = serviceDiscoveryContainer
+            DependsOn = new InputList<Resource>
+            {
+                serviceDiscoveryContainer,
+                assessmentManagementContainer,
+                trackSuggestionContainer,
+                discoveryContainer
+            }
         });
 
-        Url = Output.Create("http://localhost:8080/");
+        Url = Output.Create("http://localhost:8082/");
     }
 
     [Output]
