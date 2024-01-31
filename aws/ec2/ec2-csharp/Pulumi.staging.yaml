@@ -1,0 +1,8 @@
+config:
+  aws:region: us-east-2
+  tags:
+    application-id: OneBank
+    technical-owner: TeamGOAT
+    environment: Staging
+    provisioner: Pulumi
+    data-classification: Restricted
