@@ -69,6 +69,48 @@ pulumi stack ls
 pulumi stack select <stack_name>
 pulumi stack rm psharpx/quickstart/dev
 
+# Pulumi ESC Environments
+## esc CLI or using pulumi env (https://www.pulumi.com/docs/install/esc/)
+pulumi env --help
+pulumi env init psharpx/dev
+pulumi env rm psharpx/dev
+
+pulumi env open psharpx/dev
+## Default is json
+pulumi env open psharpx/dev --format 'yaml'
+pulumi env open psharpx/dev --format 'dotenv'
+
+## Getting and setting environment values
+pulumi env set psharpx/dev greeting hello-world
+pulumi env get psharpx/dev foo
+pulumi env get psharpx/dev
+pulumi env set psharpx/dev mysecret iam_a_secret --secret
+pulumi env set psharpx/dev 'data.active' true
+pulumi env set psharpx/dev 'data.nums[0]' 1
+pulumi env get psharpx/dev 'data.nums[1]'
+
+pulumi env set psharpx/dev 'aws.accessKey' value --secret
+pulumi env set psharpx/dev 'aws.secretKey' value --secret
+
+pulumi env set psharpx/dev 'environmentVariables.AWS_ACCESS_KEY_ID' '${aws.accessKey}'
+pulumi env set psharpx/dev 'environmentVariables.AWS_SECRET_ACCESS_KEY' '${aws.secretKey}'
+
+pulumi env set psharpx/dev 'pulumiConfig.aws:accessKey' '${aws.accessKey}'
+pulumi env set psharpx/dev 'pulumiConfig.aws:secretKey' '${aws.secretKey}'
+
+# Running commands with environment variables
+
+## To do this, use esc run <environment-name> <command>:
+pulumi env run psharpx/dev aws s3 ls
+## If you need to pass one or more flags to the command, prefix the command with --:
+pulumi env run psharpx/dev -- aws s3 ls s3://my-s3-bucket --recursive --summarize
+
+## Interpolating values
+pulumi env set psharpx/dev salutation Hello
+pulumi env set psharpx/dev name World
+pulumi env set psharpx/dev greeting '${salutation}, ${name}'
+pulumi env get psharpx/dev greeting
+
 # csharp commands
 dotnet add package Pulumi.Docker
 
