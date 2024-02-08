@@ -13,7 +13,7 @@ export class OneBankInstance {
         const ami = new OneBankAmiResolver().resolve(platform).lookup();
         this.instance = new aws.ec2.Instance(`${resourceName}-instance`, {
             ami: ami.then(ami => ami.id),
-            instanceType: "t2.micro",
+            instanceType:  windowsPlatform.includes(platform) ? "t3.large": "t2.micro",
             keyName: keyPairId,
             vpcSecurityGroupIds: securityGroups,
             userData: userData,
