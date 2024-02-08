@@ -1,4 +1,3 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
 export enum Platform {
@@ -168,7 +167,7 @@ export class GetWindowsServerAMI implements AmiLookup {
                 {
                     name: "name",
                     values: [
-                        "Windows_Server-2022*"
+                        "Windows_Server-2022-English-*-Base*"
                     ]
                 },
                 {

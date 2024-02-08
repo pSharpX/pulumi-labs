@@ -2,11 +2,11 @@
     "name": "cloudinit-ts",
     "main": "index.ts",
     "devDependencies": {
-        "@types/node": "^18"
+        "@types/node": "^18.19.14"
     },
     "dependencies": {
-        "@pulumi/pulumi": "^3.0.0",
         "@pulumi/aws": "^6.0.0",
-        "@pulumi/awsx": "^2.0.2"
+        "@pulumi/awsx": "^2.0.2",
+        "@pulumi/pulumi": "^3.0.0"
     }
 }

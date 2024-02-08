@@ -3,6 +3,8 @@ environment:
 config:
   aws:region: us-east-1
   publicKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz3pOk2LQmE/P/SIyFbXLU+WKp2+BQT0TGZ+oRv9kk9/zSpxK53uByJP8h7zu0eHYCk8EiVvXnqjys5l2WJ+wfuNknhKsrFDLflCqucIMT4lcQJWSobww+98bkYGgjyG2HSkGrBi6Qcs+Mf9/kItyvpC8D5MczkIFOjwOBL0QRPFx+/B70VLzaHr1K4osOUMmLPetB0p4Ncyh3oDFPbxUjY4qH98m8Z3KgcsByXtQO2zG7r5cO/Bw59VzdQmynf16bhzIN+i5z7QqIy49qYDISYLoj1u08G4B75sDkhRNOk533nC8f3C9Oul8lEvwurmvwWv4TGXfg/5kpBCN+ePDl8YFApeEHq93jshaTBbLixYsVq5eusrHWJpcDIykEtjK9Om/PmWyZHUUrYM99keWyHbuHzg2cGk6L4F13+HcNjW8ezYtsp9WYMojjSI7f//7It/8tWoboKZPnmJHCGBIizaTVtLZHHFpvKXuJOPyQkXB7GbX9pSO7LRcxkYvvPGc= ce.rivera@PE-IT001372
+  environment: dev
+  applicationId: onebank
   tags:
     application-id: OneBank
     technical-owner: TeamGOAT
