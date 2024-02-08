@@ -51,10 +51,18 @@ pulumi config set mongoHost mongodb://mongo:27017
 pulumi config set database cart
 pulumi config set nodeEnvironment development
 pulumi config set protocol http://
+cat ../../../ssh/ec2-keys | pulumi config set --secret privateKey
+
+pulumi config get database
+pulumi config get nodeEnvironment
+pulumi config get publicKey
 
 # You can access your outputs from the CLI by running
 pulumi stack output [property-name]
 pulumi stack output primaryStorageKey
+pulumi stack output instanceIp
+pulumi stack output instanceHost
+pulumi stack output password --show-secrets
 
 # Destroy resources
 pulumi destroy
@@ -117,3 +125,18 @@ dotnet add package Pulumi.Docker
 
 dotnet list SentimentAnalysis.csproj package
 dotnet list package --format json
+
+# Generating a private RSA key using OpenSSL
+## Generate an RSA private key, of size 2048, and output it to a file named key.pem:
+openssl genrsa -out ./ssh/ec2-keypair.pem 2048
+
+## Extract the public key from the key pair, which can be used in a certificate:
+openssl rsa -in ./ssh/ec2-keypair.pem -outform PEM -pubout -out ./ssh/ec2-keypair-pub.pem
+
+# Next, generate an OpenSSH keypair for use with your server - as per the AWS Requirements
+## when PEM format is set the header is created as  RSA PRIVATE KEY
+
+## RSA PRIVATE KEY
+ssh-keygen -t rsa -f ./ssh/ec2-keys -m PEM 
+## OPENSSH PRIVATE KEY
+ssh-keygen -t rsa -f ./ssh/ec2-keys-2
