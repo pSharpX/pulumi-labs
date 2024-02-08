@@ -1,0 +1,34 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+hostname: pulumimachine
+
+# create the docker group
+groups:
+  - docker
+# users:
+#   - name: ec2-user
+#     groups: docker
+
+yum_repos:
+  docker-ce-stable:
+    baseurl: https://download.docker.com/linux/fedora/docker-ce.repo
+    enabled: true
+    gpgcheck: true
+    gpgkey: https://download.docker.com/linux/fedora/gpg
+    name: Docker CE Stable
+
+packages:
+  - yum-utils
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+final_message: |
+  cloud-init has finished
+  version: $version
+  timestamp: $timestamp
+  datasource: $datasource
+  uptime: $uptime

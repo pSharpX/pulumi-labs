@@ -53,7 +53,7 @@ export class UbuntuStackBuilder implements StackBuilder {
         const env = config.require("environment");
         const applicationId = config.require("applicationId");
         const resourceName = `${env}-${applicationId}`;
-        const userData = fs.readFileSync(path.join(__dirname, "../config/userdata.yml"), "utf8");
+        const userData = fs.readFileSync(path.join(__dirname, "../config/userdata-ubuntu.yml"), "utf8");
 
         const ingressRules: pulumi.Input<aws.types.input.ec2.SecurityGroupIngress>[] = [
             {
@@ -80,14 +80,14 @@ export class UbuntuStackBuilder implements StackBuilder {
 export class AmazonLinuxStackBuilder implements StackBuilder {
     readonly platform: Platform;
     constructor() {
-        this.platform = Platform.AMAZON_LINUX_2;
+        this.platform = Platform.AL2023;
     }
     build(): StackOutput {
         const config = new pulumi.Config();
         const env = config.require("environment");
         const applicationId = config.require("applicationId");
         const resourceName = `${env}-${applicationId}`;
-        const userData = fs.readFileSync(path.join(__dirname, "../config/userdata.yml"), "utf8");
+        const userData = fs.readFileSync(path.join(__dirname, "../config/userdata-al.yml"), "utf8");
 
         const ingressRules: pulumi.Input<aws.types.input.ec2.SecurityGroupIngress>[] = [
             {
