@@ -132,7 +132,8 @@ export class WindowsStackBuilder implements StackBuilder {
             }
         ];
         const securityGroupResource = new OneBankSecurityGroup(`${resourceName}api`, ingressRules);
-        const instanceResource = new OneBankInstance(`${resourceName}api`, this.platform, [securityGroupResource.sg.id]);
+        const keyPairResource = new OneBankKeyPair(resourceName);
+        const instanceResource = new OneBankInstance(`${resourceName}api`, this.platform, [securityGroupResource.sg.id], keyPairResource.kp.id);
 
         const output: WindowsStackOutput = {
             instanceIp: instanceResource.instance.publicIp,
