@@ -1,0 +1,14 @@
+environment:
+  - dev
+config:
+  aws:region: us-east-1
+  applicationId: onebank
+  environment: dev
+  privateKey: your_encrypted_private_key(as secret)
+  publicKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCco0Did/0OiLDtYVbA68y4/RhDtPRCEdrzRbRRaWv+QkiqEeNdYCixg2vw7dKKcEAfZbvK16dfbYefDGtWT9Z+C1qq23SelO2Ti8FfcsxTsb5hln+qrzYHGGIlnKCAboFjnZuGtaPZKtZzz8oLRVuAD9c8f/yRytrJR6T4syxCOjTnKJeH3H/YMn04ASuimKMJGnuKfWzA5LvxB4xO5rdR6RgBkFOyDsClU7P9gYKNT41shLsyefWXNCtQG93/RPY5Du1C2VkTmjeti4XV1hRtLikN7z5qZTpgzsiM5Ts1d3IXUq9g4t3rfQvRTELn2dQ5DfeGlcdBr7O9TnxPqufdpnelUcTsk/nhLRX9b7TwUXpQqj88w3nTQTmJrSuOrwaiSEHEPEuuTaaTwGEW1pGvroD6/fJc2OpossaqLCDExajf3HytI70PaoqiqFbpGq280E5fl6WffnY7H+YlWLKHQ4lECMhCTygS9bkx4eHD6+NpdSfwDkct8p9H9rh96J0= ce.rivera@PE-IT001372
+  tags:
+    application-id: OneBank
+    data-classification: Restricted
+    environment: Development
+    provisioner: Pulumi
+    technical-owner: TeamGOAT
