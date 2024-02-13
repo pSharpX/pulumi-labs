@@ -140,3 +140,13 @@ openssl rsa -in ./ssh/ec2-keypair.pem -outform PEM -pubout -out ./ssh/ec2-keypai
 ssh-keygen -t rsa -f ./ssh/ec2-keys -m PEM 
 ## OPENSSH PRIVATE KEY
 ssh-keygen -t rsa -f ./ssh/ec2-keys-2
+
+# Retrieving AWS AMI information using Pulumi environment:
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners 099720109477 --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=name,Values=ubuntu*"
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners 099720109477 --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" --query 'Images[?CreationDate>`2022-06-01`] | sort_by(@, &CreationDate)'
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners amazon --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=platform,Values=windows"
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners amazon --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=platform,Values=windows" "Name=name,Values=Windows_Server-2022-English-*-Base*" --query 'Images[?CreationDate>`2022-06-01`] | sort_by(@, &CreationDate)'
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners amazon --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=name,Values=amzn*"
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners amazon --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=name,Values=amzn2-ami-hvm*-x86_64-gp2" --query 'Images[?CreationDate>`2022-06-01`] | sort_by(@, &CreationDate)'
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners amazon --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=name,Values=al2023-ami-minimal-2023*-x86_64" --query 'Images[?CreationDate>`2022-06-01`] | sort_by(@, &CreationDate)'
+pulumi env run psharpx/dev -- aws ec2 describe-images --region us-east-1 --owners amazon --filters "Name=virtualization-type,Values=hvm" "Name=architecture,Values=x86_64" "Name=name,Values=RHEL_8.5-x86_64-*" --query 'Images[?CreationDate>`2022-06-01`] | sort_by(@, &CreationDate)'
