@@ -34,7 +34,7 @@ export class OneBankStackResolver {
             [Platform.WINDOWS]: new WindowsStackBuilder(),
             [Platform.WINDOWS_SERVER]: new WindowsStackBuilder(),
             [Platform.AMAZON_LINUX_2]: new AmazonLinuxStackBuilder(),
-            [Platform.AL2023]: new AmazonLinuxStackBuilder(),
+            [Platform.AL2023]: new AL2023StackBuilder(),
             [Platform.RHEL]: new UbuntuStackBuilder(),
         };
     }
@@ -74,7 +74,7 @@ export class UbuntuStackBuilder implements StackBuilder {
         const securityGroupResource = new OneBankSecurityGroup(`${resourceName}api`, ingressRules);
         const keyPairResource = new OneBankKeyPair(resourceName);
         const instanceResource = new OneBankInstance(`${resourceName}api`, this.platform, [securityGroupResource.sg.id], keyPairResource.kp.id);
-        const provisioner = new OneBankProvisioner(`${resourceName}provisioner`, instanceResource.instance, this.username, privateKey, source, destination, command);
+        const provisioner = new OneBankProvisioner(`${resourceName}prov`, instanceResource.instance, this.username, privateKey, source, destination, command);
 
         const output: LinuxStackOutput = {
             instanceIp: instanceResource.instance.publicIp,
@@ -87,6 +87,49 @@ export class UbuntuStackBuilder implements StackBuilder {
 }
 
 export class AmazonLinuxStackBuilder implements StackBuilder {
+    readonly platform: Platform;
+    readonly username: string;
+    
+    constructor() {
+        this.platform = Platform.AMAZON_LINUX_2;
+        this.username = "ec2-user"
+    }
+    build(): StackOutput {
+        const config = new pulumi.Config();
+        const env = config.require("environment");
+        const applicationId = config.require("applicationId");
+        const privateKey = config.requireSecret("privateKey");
+        const resourceName = `${env}-${applicationId}`;
+        const filename = "amzn2_provisioner.sh";
+        const source = `../config/${filename}`;
+        const destination = `/tmp/${filename}`;
+        const command = `chmod +x ${destination}; sudo ${destination}`;
+
+        const ingressRules: pulumi.Input<SecurityGroupIngress>[] = [
+            {
+                description: "Allow Inbound SSH traffic",
+                protocol: "tcp",
+                fromPort: 22,
+                toPort: 22,
+                cidrBlocks: ["0.0.0.0/0"]
+            }
+        ];
+        const securityGroupResource = new OneBankSecurityGroup(`${resourceName}api`, ingressRules);
+        const keyPairResource = new OneBankKeyPair(resourceName);
+        const instanceResource = new OneBankInstance(`${resourceName}api`, this.platform, [securityGroupResource.sg.id], keyPairResource.kp.id);
+        const provisioner = new OneBankProvisioner(`${resourceName}prov`, instanceResource.instance, this.username, privateKey, source, destination, command);
+
+        const output: LinuxStackOutput = {
+            instanceIp: instanceResource.instance.publicIp,
+            instanceHost: instanceResource.instance.publicDns,
+            command: instanceResource.instance.publicIp.apply(publicIp => `ssh -i ./ssh/ec2-keys ${this.username}@${publicIp}`),
+            stdout: provisioner.runScript.stdout
+        };
+        return output;
+    }
+}
+
+export class AL2023StackBuilder implements StackBuilder {
     readonly platform: Platform;
     readonly username: string;
     
@@ -117,7 +160,7 @@ export class AmazonLinuxStackBuilder implements StackBuilder {
         const securityGroupResource = new OneBankSecurityGroup(`${resourceName}api`, ingressRules);
         const keyPairResource = new OneBankKeyPair(resourceName);
         const instanceResource = new OneBankInstance(`${resourceName}api`, this.platform, [securityGroupResource.sg.id], keyPairResource.kp.id);
-        const provisioner = new OneBankProvisioner(`${resourceName}provisioner`, instanceResource.instance, this.username, privateKey, source, destination, command);
+        const provisioner = new OneBankProvisioner(`${resourceName}prov`, instanceResource.instance, this.username, privateKey, source, destination, command);
 
         const output: LinuxStackOutput = {
             instanceIp: instanceResource.instance.publicIp,
