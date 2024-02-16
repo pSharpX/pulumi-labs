@@ -1,7 +1,7 @@
 import { OneBankStackResolver, StackOutput, LinuxStackOutput } from "./app/OneBankStack";
 import { Platform } from "./app/Platform";
 
-const stack: StackOutput = new OneBankStackResolver().resolve(Platform.AMAZON_LINUX_2).build();
+const stack: StackOutput = new OneBankStackResolver().resolve(Platform.AL2023).build();
 
 // Export the identifiers of the resources
 export const instanceIp = stack.instanceIp
