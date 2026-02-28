@@ -1,0 +1,18 @@
+config:
+  azure-native:subscriptionId: 
+  azure-native:location: eastus
+  csharp-defaultapp:tags:
+    application-id: OneBank
+    data-classification: Restricted
+    environment: dev
+    provisioner: Pulumi
+    technical-owner: TeamLvX
+  csharp-defaultapp:resourceGroupName: TeamLvX_rg
+  csharp-defaultapp:workspaceName: onebank-cluster-dev-logws
+  csharp-defaultapp:managedEnvironmentName: onebank-cluster-dev
+  csharp-defaultapp:private: "false"
+  csharp-defaultapp:applicationName: onebank-bookstore-dev
+  csharp-defaultapp:applicationId: bookstore-dev
+  csharp-defaultapp:applicationContainerName: bookstore-app-dev
+  csharp-defaultapp:imageName: nginx
+  csharp-defaultapp:imageVersion: latest

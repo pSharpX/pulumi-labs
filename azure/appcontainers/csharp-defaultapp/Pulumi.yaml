@@ -1,0 +1,34 @@
+name: csharp-defaultapp
+description: A minimal csharp application to deploy app container resource on azure
+runtime: dotnet
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: csharp
+  csharp-defaultapp:resourceGroupName:
+    type: string
+    description: name of the resource group
+  csharp-defaultapp:workspaceName:
+    type: string
+    description: name of the operational insights workspace
+  csharp-defaultapp:managedEnvironmentName:
+    type: string
+    description: name of the managed environment
+  csharp-defaultapp:private:
+    type: boolean
+    description: determine if managed environment is private
+  csharp-defaultapp:applicationName:
+    type: string
+    description: application group name
+  csharp-defaultapp:applicationId:
+    type: string
+    description: application id to be use as subfix
+  csharp-defaultapp:applicationContainerName:
+    type: string
+    description: name of the application container
+  csharp-defaultapp:imageName:
+    type: string
+    description: docke image name
+  csharp-defaultapp:imageVersion:
+    type: string
+    description: version of the docker image
