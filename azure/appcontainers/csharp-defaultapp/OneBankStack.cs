@@ -1,3 +1,5 @@
+namespace defaultapp;
+
 using System.Collections.Generic;
 using Pulumi;
 using Pulumi.AzureNative.App;

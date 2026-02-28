@@ -5,6 +5,9 @@ config:
   pulumi:tags:
     value:
       pulumi:template: csharp
+  csharp-defaultapp:location:
+    type: string
+    description: zone or location
   csharp-defaultapp:resourceGroupName:
     type: string
     description: name of the resource group
