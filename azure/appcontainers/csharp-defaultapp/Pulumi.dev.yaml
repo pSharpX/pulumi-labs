@@ -7,12 +7,17 @@ config:
     environment: dev
     provisioner: Pulumi
     technical-owner: TeamLvX
+  csharp-defaultapp:location: eastus
   csharp-defaultapp:resourceGroupName: TeamLvX_rg
-  csharp-defaultapp:workspaceName: onebank-cluster-dev-logws
-  csharp-defaultapp:managedEnvironmentName: onebank-cluster-dev
   csharp-defaultapp:private: "false"
-  csharp-defaultapp:applicationName: onebank-bookstore-dev
-  csharp-defaultapp:applicationId: bookstore-dev
-  csharp-defaultapp:applicationContainerName: bookstore-app-dev
+  csharp-defaultapp:applicationName: bookstore
+  csharp-defaultapp:applicationId: onebank
   csharp-defaultapp:imageName: nginx
   csharp-defaultapp:imageVersion: latest
+  csharp-defaultapp:port: 80
+  csharp-defaultapp:totalCpu: "0.5"
+  csharp-defaultapp:totalMemory: "1.0Gi"
+  csharp-defaultapp:public: "true"
+  csharp-defaultapp:enableScaling: "false"
+  csharp-defaultapp:minInstances: 1
+  csharp-defaultapp:maxInstances: 1

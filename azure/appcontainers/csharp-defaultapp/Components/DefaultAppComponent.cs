@@ -9,7 +9,7 @@ namespace defaultapp.components;
 
 public class DefaultAppComponent: ComponentResource
 {
-    public Output<string> Endpoint { get; private set; }
+    public Output<string> Endpoint { get; }
 
     public DefaultAppComponent(string name, DefaultAppComponentArgs args, ComponentResourceOptions? options = null) 
         : base("custom:components:DefaultAppComponent", name, options)
@@ -44,7 +44,7 @@ public class DefaultAppComponent: ComponentResource
             },
             VnetConfiguration = new VnetConfigurationArgs
             {
-                Internal = false
+                Internal = args.Private
             },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent =  this });
@@ -60,8 +60,8 @@ public class DefaultAppComponent: ComponentResource
                 Ingress = new IngressArgs
                 {
                     AllowInsecure = false,
-                    External =  true,
-                    TargetPort = 80
+                    External =  args.External,
+                    TargetPort = args.Port,
                 }
             },
             Template = new TemplateArgs
@@ -75,15 +75,15 @@ public class DefaultAppComponent: ComponentResource
                         Name = args.Name.Apply(resourceName => $"{resourceName}-app-{args.Environment}"),
                         Resources = new ContainerResourcesArgs
                         {
-                            Cpu = 0.5,
-                            Memory = "1.0Gi"
+                            Cpu = args.TotalCpu,
+                            Memory = args.TotalMemory,
                         }
                     }
                 },
-                Scale = new ScaleArgs
+                Scale = args.EnableScaling.Apply(scaling => scaling ? new ScaleArgs
                 {
-                    MinReplicas = 1,
-                    MaxReplicas = 3,
+                    MinReplicas = args.MinInstances,
+                    MaxReplicas = args.MaxInstances,
                     Rules = new []
                     {
                         new ScaleRuleArgs
@@ -99,7 +99,7 @@ public class DefaultAppComponent: ComponentResource
                             
                         }
                     }
-                }
+                }: null)! 
             },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });

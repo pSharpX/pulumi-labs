@@ -7,31 +7,49 @@ config:
       pulumi:template: csharp
   csharp-defaultapp:location:
     type: string
-    description: zone or location
+    description: Zone or location
   csharp-defaultapp:resourceGroupName:
     type: string
-    description: name of the resource group
-  csharp-defaultapp:workspaceName:
-    type: string
-    description: name of the operational insights workspace
-  csharp-defaultapp:managedEnvironmentName:
-    type: string
-    description: name of the managed environment
+    description: Name of the resource group
   csharp-defaultapp:private:
     type: boolean
-    description: determine if managed environment is private
+    description: Indicates if managed environment is private
   csharp-defaultapp:applicationName:
     type: string
-    description: application group name
+    description: Application group name
   csharp-defaultapp:applicationId:
     type: string
-    description: application id to be use as subfix
-  csharp-defaultapp:applicationContainerName:
-    type: string
-    description: name of the application container
+    description: Application ID to be use as subfix
   csharp-defaultapp:imageName:
     type: string
-    description: docke image name
+    description: Docker image name
   csharp-defaultapp:imageVersion:
     type: string
-    description: version of the docker image
+    description: Version of the docker image
+    default: latest
+  csharp-defaultapp:port:
+    type: integer
+    description: The port on which the application is listening.
+    default: 80
+  csharp-defaultapp:totalCpu:
+    type: string
+    description: The total cpu to allocate for container app.
+  csharp-defaultapp:totalMemory:
+    type: string
+    description: The total memory to allocate for container app.
+  csharp-defaultapp:external:
+    type: boolean
+    description: Indicates if application expose external endpoint.
+    default: true
+  csharp-defaultapp:enableScaling:
+    type: boolean
+    description: Indicates if scaling feature is enabled for container application.
+    default: false
+  csharp-defaultapp:minInstances:
+    type: integer
+    description: Indicates the minimum number of replicas of your application.
+    default: 1
+  csharp-defaultapp:maxInstances:
+    type: integer
+    description: Indicates the maximum number of replicas of your application.
+    default: 1

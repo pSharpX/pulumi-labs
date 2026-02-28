@@ -19,19 +19,17 @@ public class OneBankStack: Stack
     {
         var config = new Config();
         var resourceGroupName = config.Require("resourceGroupName");
-        var workspaceName = config.Require("workspaceName");
-        var managedEnvironmentName = config.Require("managedEnvironmentName");
         var isPrivate = config.RequireBoolean("private");
         var applicationName = config.Require("applicationName");
         var applicationId = config.Require("applicationId");
-        var applicationContainerName = config.Require("applicationContainerName");
         var imageName = config.Require("imageName");
         var tags = config.RequireObject<Dictionary<string, string>>("tags");
+        var environment = tags.GetValueOrDefault("environment", "dev");
         
         _resourceGroup = CreateResourceGroup(resourceGroupName, tags);
-        _workspace =  CreateWorkspace(workspaceName, tags);
-        _managedEnvironment = CreateManagedEnvironment(managedEnvironmentName, tags, isPrivate);
-        _container = CreateContainerApp(applicationId ,applicationName, applicationContainerName, imageName, tags);
+        _workspace =  CreateWorkspace(applicationId, environment, tags);
+        _managedEnvironment = CreateManagedEnvironment(applicationId, environment, tags, isPrivate);
+        _container = CreateContainerApp(applicationId ,applicationName, environment, imageName, tags);
         
         ResourceGroupId = _resourceGroup.Id;
         ManagedEnvironmentId = _managedEnvironment.Id;
@@ -50,12 +48,12 @@ public class OneBankStack: Stack
         return resourceGroup;
     }
 
-    private Workspace CreateWorkspace(string resourceName, Dictionary<string, string> tags)
+    private Workspace CreateWorkspace(string applicationId, string environment, Dictionary<string, string> tags)
     {
         var workspace = new Workspace("OneBank_OperationalInsightsWorkspace", new WorkspaceArgs
         {
             ResourceGroupName = _resourceGroup.Name,
-            WorkspaceName = resourceName,
+            WorkspaceName = $"{applicationId}-logws-{environment}",
             Sku = new WorkspaceSkuArgs
             {
                 Name = WorkspaceSkuNameEnum.PerGB2018,
@@ -66,11 +64,11 @@ public class OneBankStack: Stack
         return workspace;
     }
 
-    private ManagedEnvironment CreateManagedEnvironment(string resourceName, Dictionary<string, string> tags, bool isPrivate)
+    private ManagedEnvironment CreateManagedEnvironment(string applicationId, string environment, Dictionary<string, string> tags, bool isPrivate)
     {
         var managedEnvironment = new ManagedEnvironment("OneBank_ManagedEnvironment", new ManagedEnvironmentArgs
         {
-            EnvironmentName = resourceName,
+            EnvironmentName = $"{applicationId}-cluster-{environment}",
             ResourceGroupName = _resourceGroup.Name,
             AppLogsConfiguration = new AppLogsConfigurationArgs
             {
@@ -91,12 +89,12 @@ public class OneBankStack: Stack
         return managedEnvironment;
     }
 
-    private ContainerApp CreateContainerApp(string applicationId, string applicationName, string applicationContainerName, string imageName, Dictionary<string, string> tags)
+    private ContainerApp CreateContainerApp(string groupId, string applicationName, string environment, string imageName, Dictionary<string, string> tags)
     {
         var containerApp = new ContainerApp("OneBank_ContainerApp", new ContainerAppArgs
         {
             ResourceGroupName = _resourceGroup.Name,
-            ContainerAppName = applicationName,
+            ContainerAppName = $"{groupId}-{applicationName}-{environment}",
             EnvironmentId =  _managedEnvironment.Id,
             Configuration = new ConfigurationArgs
             {
@@ -109,13 +107,13 @@ public class OneBankStack: Stack
             },
             Template = new TemplateArgs
             {
-                RevisionSuffix = applicationId,
+                RevisionSuffix = $"{groupId}-{applicationName}-{environment}",
                 Containers = new[]
                 {
                     new ContainerArgs
                     {
                         Image = imageName,
-                        Name = applicationContainerName,
+                        Name = $"{applicationName}-{environment}",
                         Resources = new ContainerResourcesArgs
                         {
                             Cpu = 0.5,
