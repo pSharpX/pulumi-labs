@@ -11,8 +11,4 @@
     <PackageReference Include="Pulumi.AzureNative" Version="3.14.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Factories\" />
-  </ItemGroup>
-
 </Project>

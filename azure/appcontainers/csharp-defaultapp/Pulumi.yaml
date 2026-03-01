@@ -53,3 +53,13 @@ config:
     type: integer
     description: Indicates the maximum number of replicas of your application.
     default: 1
+  csharp-defaultapp:addressPrefixes:
+    type: array
+    description: List of address blocks reserved for this virtual network in CIDR notation
+    items:
+      type: string
+  csharp-defaultapp:subnetAddressPrefixes:
+    type: array
+    description: List of address prefixes for the subnet.
+    items:
+      type: string

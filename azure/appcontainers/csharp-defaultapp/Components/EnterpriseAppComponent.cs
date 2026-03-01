@@ -4,8 +4,8 @@ namespace defaultapp.components;
 
 public class EnterpriseAppComponent: ComponentResource
 {
-    public EnterpriseAppComponent(string type, string name, ComponentResourceOptions? options = null) 
-        : base(type, name, options)
+    public EnterpriseAppComponent(string name, ComponentResourceOptions? options = null) 
+        : base("custom:components:EnterpriseAppComponent", name, options)
     {
     }
 }

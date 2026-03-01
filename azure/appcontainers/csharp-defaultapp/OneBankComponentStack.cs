@@ -20,6 +20,8 @@ public class OneBankComponentStack: Stack
         var imageName = config.Require("imageName");
         var port = config.RequireInt32("port");
         var isPrivate = config.RequireBoolean("private");
+        var addressPrefixes = config.GetObject<List<string>>("addressPrefixes");
+        var subnetAddressPrefixes = config.GetObject<List<string>>("subnetAddressPrefixes");
         var isExternal = config.RequireBoolean("external");
         var totalCpu = config.RequireDouble("totalCpu");
         var totalMemory = config.Require("totalMemory");
@@ -39,6 +41,8 @@ public class OneBankComponentStack: Stack
             ResourceGroupName = _resourceGroup.Name,
             Location = location,
             Private = isPrivate,
+            AddressPrefixes = addressPrefixes!,
+            SubnetAddressPrefixes = subnetAddressPrefixes!,
             Image = imageName,
             ParentName = applicationId,
             Name = applicationName,

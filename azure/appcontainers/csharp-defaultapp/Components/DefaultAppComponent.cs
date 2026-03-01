@@ -1,7 +1,13 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using defaultapp.Factories;
 using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
+using Pulumi.AzureNative.Authorization;
+using Pulumi.AzureNative.KeyVault;
+using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
 
@@ -9,12 +15,19 @@ namespace defaultapp.components;
 
 public class DefaultAppComponent: ComponentResource
 {
+    private readonly Workspace _workspace;
+    private readonly ManagedEnvironment _managedEnvironment;
+    
+    private VirtualNetwork? _virtualNetwork;
+    private Vault? _vault;
+    private ImmutableList<Secret>? _secrets;
+    
     public Output<string> Endpoint { get; }
 
     public DefaultAppComponent(string name, DefaultAppComponentArgs args, ComponentResourceOptions? options = null) 
         : base("custom:components:DefaultAppComponent", name, options)
     {
-        var workspace = new Workspace("OneBank_OperationalInsightsWorkspace", new WorkspaceArgs
+        _workspace = new Workspace("OneBank_OperationalInsightsWorkspace", new WorkspaceArgs
         {
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
@@ -26,8 +39,21 @@ public class DefaultAppComponent: ComponentResource
             RetentionInDays = 30,
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });
+
+        _virtualNetwork = args is { Private: true, SubnetId: null } ? VirtualNetworkFactory.Create(new CreateVirtualNetworkArgs
+            {
+                Name = $"{args.ParentName}-vnet-{args.Environment}", 
+                ResourceGroupName = args.ResourceGroupName, 
+                Location = args.Location!,
+                AddressPrefixes = args.AddressPrefixes!,
+                SubnetAddressPrefixes = args.SubnetAddressPrefixes!,
+                Tags = args.Tags,
+                Parent = this
+            })
+            : null;
+        var subnetId = _virtualNetwork?.Subnets.Apply(subnets => subnets[0].Id);
         
-        var managedEnvironment = new ManagedEnvironment("OneBank_ManagedEnvironment", new ManagedEnvironmentArgs
+        _managedEnvironment = new ManagedEnvironment("OneBank_ManagedEnvironment", new ManagedEnvironmentArgs
         {
             EnvironmentName = args.ParentName.Apply(environmentName => $"{environmentName}-cluster-{args.Environment}"),
             ResourceGroupName = args.ResourceGroupName,
@@ -37,24 +63,53 @@ public class DefaultAppComponent: ComponentResource
                 Destination = "log-analytics",
                 LogAnalyticsConfiguration = new LogAnalyticsConfigurationArgs
                 {
-                    CustomerId = workspace.CustomerId,
-                    SharedKey = OneBankHelper.GetWorkspaceSharedKeys(args.ResourceGroupName, workspace.Name)
+                    CustomerId = _workspace.CustomerId,
+                    SharedKey = OneBankHelper.GetWorkspaceSharedKeys(args.ResourceGroupName, _workspace.Name)
                         .Apply(key => key.PrimarySharedKey!)
                 },
             },
-            VnetConfiguration = new VnetConfigurationArgs
-            {
-                Internal = args.Private
-            },
+            VnetConfiguration = args.Private ? 
+                new VnetConfigurationArgs
+                {
+                    Internal = args.Private,
+                    InfrastructureSubnetId =  args.SubnetId is not null ? args.SubnetId:  subnetId!
+                } : new VnetConfigurationArgs
+                {
+                    Internal = args.Private,
+                },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent =  this });
+
+        if (!args.Secrets.IsEmpty)
+        {
+            _vault = CreateVaultFactory.Create(new CreateVaultArgs
+            {
+                Name = $"{args.ParentName}-vault-{args.Environment}",
+                TenantId = GetClientConfig.Invoke().Apply(config => config.TenantId),
+                Location = args.Location,
+                ResourceGroupName = args.ResourceGroupName,
+                Parent = this,
+                Tags = args.Tags,
+            });
+
+            _secrets = args.Secrets.Select(secret => CreateSecretFactory.Create(new CreateSecretArgs
+                {
+                    VaultName = _vault.Name,
+                    Name = secret.Item1,
+                    Value = secret.Item2,
+                    Tags = args.Tags,
+                    ResourceGroupName = args.ResourceGroupName,
+                    Location = null,
+                }))
+                .ToImmutableList();
+        }
         
         var containerApp = new ContainerApp("OneBank_ContainerApp", new ContainerAppArgs
         {
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
             ContainerAppName = args.Name.Apply(resourceName => $"{resourceName}-app-{args.Environment}"),
-            EnvironmentId =  managedEnvironment.Id,
+            EnvironmentId =  _managedEnvironment.Id,
             Configuration = new ConfigurationArgs
             {
                 Ingress = new IngressArgs
