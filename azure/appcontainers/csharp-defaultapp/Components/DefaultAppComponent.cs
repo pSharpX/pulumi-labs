@@ -7,9 +7,13 @@ using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
 using Pulumi.AzureNative.Authorization;
 using Pulumi.AzureNative.KeyVault;
+using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
+using Pulumi.Random;
+using ManagedServiceIdentityArgs = Pulumi.AzureNative.App.Inputs.ManagedServiceIdentityArgs;
+using ManagedServiceIdentityType = Pulumi.AzureNative.App.ManagedServiceIdentityType;
 
 namespace defaultapp.components;
 
@@ -19,6 +23,7 @@ public class DefaultAppComponent: ComponentResource
     private readonly ManagedEnvironment _managedEnvironment;
     
     private VirtualNetwork? _virtualNetwork;
+    private UserAssignedIdentity _managedIdentity;
     private Vault? _vault;
     private ImmutableList<Secret>? _secrets;
     
@@ -80,9 +85,24 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent =  this });
 
+        ManagedServiceIdentityArgs? identity = null;
         if (!args.Secrets.IsEmpty)
         {
-            _vault = CreateVaultFactory.Create(new CreateVaultArgs
+            _managedIdentity = UserAssignedIdentityFactory.Create(new CreateUserAssignedIdentityArgs
+            {
+                Name = $"{args.ParentName}-managed-identity-{args.Environment}",
+                Location = args.Location,
+                ResourceGroupName = args.ResourceGroupName,
+                Parent = this,
+                Tags = args.Tags
+            });
+            identity = new ManagedServiceIdentityArgs
+            {
+                Type = ManagedServiceIdentityType.UserAssigned,
+                UserAssignedIdentities = new[] { _managedIdentity.PrincipalId }
+            };
+                
+            _vault = VaultFactory.Create(new CreateVaultArgs
             {
                 Name = $"{args.ParentName}-vault-{args.Environment}",
                 TenantId = GetClientConfig.Invoke().Apply(config => config.TenantId),
@@ -92,7 +112,25 @@ public class DefaultAppComponent: ComponentResource
                 Tags = args.Tags,
             });
 
-            _secrets = args.Secrets.Select(secret => CreateSecretFactory.Create(new CreateSecretArgs
+            var roleDefinitionId = Output.Create(BuiltInRoleIds.Get(BuiltInRole.KeyVaultSecretsUser));
+            var roleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+            {
+                Name = new RandomUuid($"OneBank_RoleAssignment_{args.Name}_Vault", new RandomUuidArgs { Keepers =
+                    {
+                        { "ResourceGroupName", args.ResourceGroupName }, 
+                        { "ManagedIdentityId", _managedIdentity.Id },
+                        { "RoleDefinitionId", roleDefinitionId }
+                    }
+                }).Result,
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                RoleDefinitionId = roleDefinitionId,
+                PrincipalId = _managedIdentity.PrincipalId,
+                Scope = _vault.Id,
+                Parent = this
+            });
+
+            _secrets = args.Secrets.Select(secret => SecretFactory.Create(new CreateSecretArgs
                 {
                     VaultName = _vault.Name,
                     Name = secret.Item1,
@@ -110,6 +148,7 @@ public class DefaultAppComponent: ComponentResource
             Location = args.Location,
             ContainerAppName = args.Name.Apply(resourceName => $"{resourceName}-app-{args.Environment}"),
             EnvironmentId =  _managedEnvironment.Id,
+            Identity = identity!,
             Configuration = new ConfigurationArgs
             {
                 Ingress = new IngressArgs

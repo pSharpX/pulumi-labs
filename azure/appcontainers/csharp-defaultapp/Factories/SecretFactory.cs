@@ -4,7 +4,7 @@ using Pulumi.AzureNative.KeyVault.Inputs;
 
 namespace defaultapp.Factories;
 
-public static class CreateSecretFactory
+public static class SecretFactory
 {
     public static Secret Create(CreateSecretArgs args)
     {

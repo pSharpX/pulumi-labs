@@ -1,3 +1,5 @@
+using Pulumi.AzureNative.Authorization;
+
 namespace defaultapp;
 
 using Pulumi;
@@ -13,5 +15,19 @@ public static class OneBankHelper
                 ResourceGroupName = items.Item1,
                 WorkspaceName = items.Item2
             }));
+    }
+
+    public static Output<GetClientConfigResult> GetClientConfig()
+    {
+        return Pulumi.AzureNative.Authorization.GetClientConfig.Invoke();
+    }
+
+    public static Output<GetRoleDefinitionResult> GetRoleDefinition(string roleDefinitionId, string scope)
+    {
+        return Pulumi.AzureNative.Authorization.GetRoleDefinition.Invoke(new GetRoleDefinitionInvokeArgs
+        {
+            RoleDefinitionId = roleDefinitionId,
+            Scope = scope
+        });
     }
 }

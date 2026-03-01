@@ -5,7 +5,7 @@ using Pulumi.AzureNative.KeyVault.Inputs;
 
 namespace defaultapp.Factories;
 
-public static class CreateVaultFactory
+public static class VaultFactory
 {
     public static Vault Create(CreateVaultArgs args)
     {
