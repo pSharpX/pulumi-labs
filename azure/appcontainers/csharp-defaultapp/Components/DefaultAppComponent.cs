@@ -121,7 +121,7 @@ public class DefaultAppComponent: ComponentResource
                         { "ManagedIdentityId", _managedIdentity.Id },
                         { "RoleDefinitionId", roleDefinitionId }
                     }
-                }).Result,
+                }, new CustomResourceOptions { Parent = this }).Result,
                 ResourceGroupName = args.ResourceGroupName,
                 Location = args.Location,
                 RoleDefinitionId = roleDefinitionId,
