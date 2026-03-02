@@ -63,3 +63,40 @@ config:
     description: List of address prefixes for the subnet.
     items:
       type: string
+  csharp-defaultapp:allowedOrigins:
+    type: array
+    description: Specifies the content for the access-control-allow-origins header.
+    items: 
+      type: string
+    default: 
+      - "*"
+  csharp-defaultapp:allowedHeaders:
+    type: array
+    description: Specifies the content for the access-control-allow-headers header.
+    items:
+      type: string
+    default:
+      - "*"
+  csharp-defaultapp:allowedMethods:
+    type: array
+    description: Specifies the content for the access-control-allow-methods header.
+    items:
+      type: string
+    default:
+      - "*"
+  csharp-defaultapp:enableProbes:
+    type: boolean
+    description: Indicates if heath check should be performed
+    default: false
+  csharp-defaultapp:path:
+    type: string
+    description: Path to access on the HTTP server.
+    default: "/"
+  csharp-defaultapp:initialDelaySeconds:
+    type: integer
+    description: Number of seconds after the container has started before liveness probes are initiated. Minimum value is 1. Maximum value is 60.
+    default: 3
+  csharp-defaultapp:periodSeconds:
+    type: integer
+    description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1. Maximum value is 240.
+    default: 3

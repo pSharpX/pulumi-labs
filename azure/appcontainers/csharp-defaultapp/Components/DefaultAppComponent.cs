@@ -14,6 +14,7 @@ using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.Random;
 using ManagedServiceIdentityArgs = Pulumi.AzureNative.App.Inputs.ManagedServiceIdentityArgs;
 using ManagedServiceIdentityType = Pulumi.AzureNative.App.ManagedServiceIdentityType;
+using SecretArgs = Pulumi.AzureNative.App.Inputs.SecretArgs;
 
 namespace defaultapp.components;
 
@@ -86,6 +87,7 @@ public class DefaultAppComponent: ComponentResource
         }, new CustomResourceOptions { Parent =  this });
 
         ManagedServiceIdentityArgs? identity = null;
+        List<SecretArgs> secretListArgs = [];
         if (!args.Secrets.IsEmpty)
         {
             _managedIdentity = UserAssignedIdentityFactory.Create(new CreateUserAssignedIdentityArgs
@@ -140,6 +142,34 @@ public class DefaultAppComponent: ComponentResource
                     Location = null,
                 }))
                 .ToImmutableList();
+
+            secretListArgs = args.Secrets.Select(secret => new SecretArgs
+            {
+                Identity = _managedIdentity.PrincipalId,
+                KeyVaultUrl = _vault.Properties.Apply(properties => properties.VaultUri),
+                Name = secret.Item1
+            }).ToList();
+        }
+
+        List<ContainerAppProbeArgs> probes = [];
+        if (args.EnableProbes)
+        {
+            probes =
+            [
+                new ContainerAppProbeArgs
+                {
+                    FailureThreshold = 3,
+                    HttpGet = new ContainerAppProbeHttpGetArgs
+                    {
+                        Port = args.Port,
+                        Path = args.Path
+                    },
+                    InitialDelaySeconds = args.InitialDelaySeconds,
+                    PeriodSeconds = args.PeriodSeconds,
+                    SuccessThreshold = 1,
+                    Type = Pulumi.AzureNative.App.Type.Liveness
+                }
+            ];
         }
         
         var containerApp = new ContainerApp("OneBank_ContainerApp", new ContainerAppArgs
@@ -156,7 +186,14 @@ public class DefaultAppComponent: ComponentResource
                     AllowInsecure = false,
                     External =  args.External,
                     TargetPort = args.Port,
-                }
+                    CorsPolicy = new CorsPolicyArgs
+                    {
+                        AllowedOrigins = args.AllowedOrigins,
+                        AllowedHeaders = args.AllowedHeaders,
+                        AllowedMethods = args.AllowedMethods
+                    }
+                },
+                Secrets = secretListArgs,
             },
             Template = new TemplateArgs
             {
@@ -171,7 +208,8 @@ public class DefaultAppComponent: ComponentResource
                         {
                             Cpu = args.TotalCpu,
                             Memory = args.TotalMemory,
-                        }
+                        },
+                        Probes = probes
                     }
                 },
                 Scale = args.EnableScaling.Apply(scaling => scaling ? new ScaleArgs

@@ -16,7 +16,7 @@ public class DefaultAppComponentArgs
     public required Input<string> Image { get; init; }
     public Input<string> ImageVersion { get; init; } = "latest";
     public required Input<bool> External { get; init; } = false;
-    public required Input<int> Port { get; init; }
+    public Input<int> Port { get; init; } = 80;
     public required Input<double> TotalCpu { get; init; }
     public required Input<string> TotalMemory { get; init; }
     public Input<bool> EnableScaling { get; init; } = false;
@@ -26,4 +26,12 @@ public class DefaultAppComponentArgs
     public InputList<string>? AddressPrefixes { get; init; }
     public InputList<string>? SubnetAddressPrefixes { get; init; }
     public ImmutableList<(string, string)> Secrets { get; set; } = ImmutableList.Create< (string, string)>();
+    public List<string> AllowedOrigins { get; set; } = ["*"];
+    public List<string> AllowedHeaders { get; set; } = ["*"];
+    public List<string> AllowedMethods { get; set; } = ["*"];
+    public bool EnableProbes { get; set; } = false;
+    public Input<string> Path { get; set; } = "/";
+    public Input<int> InitialDelaySeconds { get; set; } = 3;
+    public Input<int> PeriodSeconds { get; set; } = 3;
+
 }
