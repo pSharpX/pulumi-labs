@@ -10,11 +10,6 @@ public static class VaultFactory
 {
     public static Vault Create(CreateVaultArgs args)
     {
-        args.Name.Apply(nn =>
-        {
-            Console.WriteLine($"===============> {nn}");
-            return nn;
-        });
         var networkAclRuleSet = args.EnableNetworkAcl
             ? new NetworkRuleSetArgs
             {

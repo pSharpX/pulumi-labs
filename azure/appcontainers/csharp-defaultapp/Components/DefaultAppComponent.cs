@@ -146,9 +146,9 @@ public class DefaultAppComponent: ComponentResource
 
             secretListArgs = _secrets.Select(secret => new SecretArgs
             {
-                Identity = _managedIdentity.PrincipalId,
-                KeyVaultUrl = _vault.Properties.Apply(properties => properties.VaultUri),
-                Name = secret.Properties.Apply(props => props.SecretUri)
+                Identity = _managedIdentity.Id,
+                KeyVaultUrl = secret.Properties.Apply(props => props.SecretUri),
+                Name = secret.Name
             }).ToList();
         }
 
