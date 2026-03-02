@@ -6,6 +6,8 @@ namespace defaultapp.components;
 
 public class DefaultAppComponentArgs
 {
+    public required Input<string> TenantId { get; init; }
+    public required Input<string> SubscriptionId { get; init; }
     public required Input<string> Name { get; init; }
     public required Input<string> ParentName { get; init; }
     public required Input<string> ResourceGroupName { get; init; }
@@ -25,7 +27,7 @@ public class DefaultAppComponentArgs
     public string? SubnetId { get; set; }
     public InputList<string>? AddressPrefixes { get; init; }
     public InputList<string>? SubnetAddressPrefixes { get; init; }
-    public ImmutableList<(string, string)> Secrets { get; set; } = ImmutableList.Create< (string, string)>();
+    public ImmutableList<(string, string, string)> Secrets { get; set; } = ImmutableList.Create< (string, string, string)>();
     public List<string> AllowedOrigins { get; set; } = ["*"];
     public List<string> AllowedHeaders { get; set; } = ["*"];
     public List<string> AllowedMethods { get; set; } = ["*"];

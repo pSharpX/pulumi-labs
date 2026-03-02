@@ -7,7 +7,7 @@ public static class UserAssignedIdentityFactory
 {
     public static UserAssignedIdentity Create(CreateUserAssignedIdentityArgs args)
     {
-        return new UserAssignedIdentity($"OneBank_UserAssignedIdentity_{args.Parent}", new UserAssignedIdentityArgs
+        return new UserAssignedIdentity("OneBank_UserAssignedIdentity", new UserAssignedIdentityArgs
         {
             Location = args.Location,
             ResourceGroupName =  args.ResourceGroupName,

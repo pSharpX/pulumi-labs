@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Pulumi;
 using Pulumi.AzureNative.KeyVault;
@@ -9,6 +10,11 @@ public static class VaultFactory
 {
     public static Vault Create(CreateVaultArgs args)
     {
+        args.Name.Apply(nn =>
+        {
+            Console.WriteLine($"===============> {nn}");
+            return nn;
+        });
         var networkAclRuleSet = args.EnableNetworkAcl
             ? new NetworkRuleSetArgs
             {
@@ -24,13 +30,14 @@ public static class VaultFactory
                 }).ToList() !
             }
             : null;
-        return new Vault($"OneBank_Vault_{args.Name}", new VaultArgs
+        return new Vault($"OneBank-Vault", new VaultArgs
         {
             VaultName = args.Name,
             ResourceGroupName = args.ResourceGroupName,
             Location =  args.Location,
             Properties = new VaultPropertiesArgs
             {
+                TenantId = args.TenantId,
                 EnabledForDeployment = args.EnabledForTemplateDeployment,
                 EnableSoftDelete = args.EnableSoftDelete,
                 EnableRbacAuthorization =  args.EnableRbacAuthorization,

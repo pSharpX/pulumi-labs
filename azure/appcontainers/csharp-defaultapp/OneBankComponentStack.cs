@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using defaultapp.components;
 using Pulumi;
 using Pulumi.AzureNative.Resources;
@@ -28,16 +31,23 @@ public class OneBankComponentStack: Stack
         var enableScaling = config.RequireBoolean("enableScaling");
         var minInstances = config.RequireInt32("minInstances");
         var maxInstances =  config.RequireInt32("maxInstances");
-        var tags = config.RequireObject<Dictionary<string, string>>("tags");   
-        
+        var allowedOrigins = config.RequireObject<List<string>>("allowedOrigins");
+        var allowedMethods = config.RequireObject<List<string>>("allowedMethods");
+        var allowedHeaders = config.RequireObject<List<string>>("allowedHeaders");
+        var enableProbes = config.RequireBoolean("enableProbes");
+        var secrets = config.GetObject<List< string[]>>("secrets");
+        var tags = config.RequireObject<Dictionary<string, string>>("tags");
+
+        var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
         _resourceGroup = new ResourceGroup("TeamLvX_rg", new ResourceGroupArgs
         {
             ResourceGroupName = resourceGroupName,
             Tags = tags
         });
-
         _componentResource = new DefaultAppComponent("OneBankDefaultAppComponent", new DefaultAppComponentArgs
         {
+            TenantId = clientConfig.TenantId,
+            SubscriptionId = clientConfig.SubscriptionId,
             ResourceGroupName = _resourceGroup.Name,
             Location = location,
             Private = isPrivate,
@@ -53,6 +63,11 @@ public class OneBankComponentStack: Stack
             EnableScaling = enableScaling,
             MinInstances = minInstances,
             MaxInstances = maxInstances,
+            AllowedOrigins = allowedOrigins,
+            AllowedMethods = allowedMethods,
+            AllowedHeaders = allowedHeaders,
+            EnableProbes = enableProbes,
+            Secrets = secrets?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
             Tags = tags,
         });
 

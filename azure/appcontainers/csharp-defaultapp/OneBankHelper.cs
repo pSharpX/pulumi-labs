@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Pulumi.AzureNative.Authorization;
 
 namespace defaultapp;
@@ -21,8 +22,13 @@ public static class OneBankHelper
     {
         return Pulumi.AzureNative.Authorization.GetClientConfig.Invoke();
     }
+    
+    public static Task<GetClientConfigResult> GetClientConfigAsync()
+    {
+        return Pulumi.AzureNative.Authorization.GetClientConfig.InvokeAsync();
+    }
 
-    public static Output<GetRoleDefinitionResult> GetRoleDefinition(string roleDefinitionId, string scope)
+    public static Output<GetRoleDefinitionResult> GetRoleDefinition(string roleDefinitionId, Input<string>scope)
     {
         return Pulumi.AzureNative.Authorization.GetRoleDefinition.Invoke(new GetRoleDefinitionInvokeArgs
         {

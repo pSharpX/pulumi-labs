@@ -8,7 +8,7 @@ public static class SecretFactory
 {
     public static Secret Create(CreateSecretArgs args)
     {
-        return new Secret($"OneBank_Secret_{args.Name}", new SecretArgs
+        return new Secret($"OneBank_Secret_{args.Alias}", new SecretArgs
         {
             SecretName =  args.Name,
             VaultName =  args.VaultName,

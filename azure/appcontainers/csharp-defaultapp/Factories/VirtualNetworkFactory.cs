@@ -24,9 +24,17 @@ public static class VirtualNetworkFactory
                 new SubnetArgs
                 {
                     AddressPrefixes = args.SubnetAddressPrefixes,
-                    Name = $"{args.Name}-Subnet",
+                    Name = Output.Format($"{args.Name}-Subnet"),
                     PrivateEndpointNetworkPolicies = "Enabled",
-                    PrivateLinkServiceNetworkPolicies = "Enabled"
+                    PrivateLinkServiceNetworkPolicies = "Enabled",
+                    Delegations =
+                    {
+                        new DelegationArgs
+                        {
+                            Name = "apps-delegation",
+                            ServiceName = "Microsoft.App/environments",
+                        },
+                    },
                 },
             },
             Tags = args.Tags!

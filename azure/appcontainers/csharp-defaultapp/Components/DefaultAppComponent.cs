@@ -5,7 +5,6 @@ using defaultapp.Factories;
 using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
-using Pulumi.AzureNative.Authorization;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
@@ -24,7 +23,7 @@ public class DefaultAppComponent: ComponentResource
     private readonly ManagedEnvironment _managedEnvironment;
     
     private VirtualNetwork? _virtualNetwork;
-    private UserAssignedIdentity _managedIdentity;
+    private UserAssignedIdentity? _managedIdentity;
     private Vault? _vault;
     private ImmutableList<Secret>? _secrets;
     
@@ -37,7 +36,7 @@ public class DefaultAppComponent: ComponentResource
         {
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
-            WorkspaceName = args.ParentName.Apply(resourceName => $"{resourceName}-cluster-logws-{args.Environment}"),
+            WorkspaceName = Output.Format($"{args.ParentName}-cluster-logws-{args.Environment}"),
             Sku = new WorkspaceSkuArgs()
             {
                 Name = WorkspaceSkuNameEnum.PerGB2018,
@@ -48,7 +47,7 @@ public class DefaultAppComponent: ComponentResource
 
         _virtualNetwork = args is { Private: true, SubnetId: null } ? VirtualNetworkFactory.Create(new CreateVirtualNetworkArgs
             {
-                Name = $"{args.ParentName}-vnet-{args.Environment}", 
+                Name = Output.Format($"{args.ParentName}-vnet-{args.Environment}"), 
                 ResourceGroupName = args.ResourceGroupName, 
                 Location = args.Location!,
                 AddressPrefixes = args.AddressPrefixes!,
@@ -61,7 +60,7 @@ public class DefaultAppComponent: ComponentResource
         
         _managedEnvironment = new ManagedEnvironment("OneBank_ManagedEnvironment", new ManagedEnvironmentArgs
         {
-            EnvironmentName = args.ParentName.Apply(environmentName => $"{environmentName}-cluster-{args.Environment}"),
+            EnvironmentName = Output.Format($"{args.ParentName}-cluster-{args.Environment}"),
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
             AppLogsConfiguration = new AppLogsConfigurationArgs()
@@ -92,7 +91,7 @@ public class DefaultAppComponent: ComponentResource
         {
             _managedIdentity = UserAssignedIdentityFactory.Create(new CreateUserAssignedIdentityArgs
             {
-                Name = $"{args.ParentName}-managed-identity-{args.Environment}",
+                Name = Output.Format($"{args.ParentName}-managed-identity-{args.Environment}"),
                 Location = args.Location,
                 ResourceGroupName = args.ResourceGroupName,
                 Parent = this,
@@ -101,23 +100,23 @@ public class DefaultAppComponent: ComponentResource
             identity = new ManagedServiceIdentityArgs
             {
                 Type = ManagedServiceIdentityType.UserAssigned,
-                UserAssignedIdentities = new[] { _managedIdentity.PrincipalId }
+                UserAssignedIdentities = new[] { _managedIdentity.Id }
             };
                 
             _vault = VaultFactory.Create(new CreateVaultArgs
             {
-                Name = $"{args.ParentName}-vault-{args.Environment}",
-                TenantId = GetClientConfig.Invoke().Apply(config => config.TenantId),
+                Name = Output.Format($"{args.ParentName}-vault-{args.Environment}"),
+                TenantId = args.TenantId,
                 Location = args.Location,
                 ResourceGroupName = args.ResourceGroupName,
                 Parent = this,
                 Tags = args.Tags,
             });
 
-            var roleDefinitionId = Output.Create(BuiltInRoleIds.Get(BuiltInRole.KeyVaultSecretsUser));
+            var roleDefinitionId = OneBankHelper.GetRoleDefinition(BuiltInRoleIds.Get(BuiltInRole.KeyVaultSecretsUser), _vault.Id).Apply(rd => rd.Id);
             var roleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
             {
-                Name = new RandomUuid($"OneBank_RoleAssignment_{args.Name}_Vault", new RandomUuidArgs { Keepers =
+                Name = new RandomUuid("OneBank_RoleAssignment_ManagedIdentity_Vault", new RandomUuidArgs { Keepers =
                     {
                         { "ResourceGroupName", args.ResourceGroupName }, 
                         { "ManagedIdentityId", _managedIdentity.Id },
@@ -129,25 +128,27 @@ public class DefaultAppComponent: ComponentResource
                 RoleDefinitionId = roleDefinitionId,
                 PrincipalId = _managedIdentity.PrincipalId,
                 Scope = _vault.Id,
-                Parent = this
+                Parent = this,
+                Tags = args.Tags
             });
 
             _secrets = args.Secrets.Select(secret => SecretFactory.Create(new CreateSecretArgs
                 {
                     VaultName = _vault.Name,
                     Name = secret.Item1,
-                    Value = secret.Item2,
+                    Alias = secret.Item2,
+                    Value = secret.Item3,
                     Tags = args.Tags,
                     ResourceGroupName = args.ResourceGroupName,
                     Location = null,
                 }))
                 .ToImmutableList();
 
-            secretListArgs = args.Secrets.Select(secret => new SecretArgs
+            secretListArgs = _secrets.Select(secret => new SecretArgs
             {
                 Identity = _managedIdentity.PrincipalId,
                 KeyVaultUrl = _vault.Properties.Apply(properties => properties.VaultUri),
-                Name = secret.Item1
+                Name = secret.Properties.Apply(props => props.SecretUri)
             }).ToList();
         }
 
@@ -176,7 +177,7 @@ public class DefaultAppComponent: ComponentResource
         {
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
-            ContainerAppName = args.Name.Apply(resourceName => $"{resourceName}-app-{args.Environment}"),
+            ContainerAppName = Output.Format($"{args.Name}-app-{args.Environment}"),
             EnvironmentId =  _managedEnvironment.Id,
             Identity = identity!,
             Configuration = new ConfigurationArgs
@@ -197,13 +198,13 @@ public class DefaultAppComponent: ComponentResource
             },
             Template = new TemplateArgs
             {
-                RevisionSuffix = args.Name.Apply(resourceName => $"{resourceName}-app-{args.Environment}"),
+                RevisionSuffix = Output.Format($"{args.Name}-app-{args.Environment}"),
                 Containers = new[]
                 {
                     new ContainerArgs
                     {
                         Image = Output.Format($"{args.Image}:{args.ImageVersion}"),
-                        Name = args.Name.Apply(resourceName => $"{resourceName}-app-{args.Environment}"),
+                        Name = Output.Format($"{args.Name}-app-{args.Environment}"),
                         Resources = new ContainerResourcesArgs
                         {
                             Cpu = args.TotalCpu,
