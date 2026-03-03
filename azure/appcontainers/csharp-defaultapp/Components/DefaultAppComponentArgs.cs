@@ -4,14 +4,8 @@ using Pulumi;
 
 namespace defaultapp.components;
 
-public class DefaultAppComponentArgs
+public class DefaultAppComponentArgs: AppComponentArgs
 {
-    public required Input<string> TenantId { get; init; }
-    public required Input<string> SubscriptionId { get; init; }
-    public required Input<string> Name { get; init; }
-    public required Input<string> ParentName { get; init; }
-    public required Input<string> ResourceGroupName { get; init; }
-    public required Input<string>? Location { get; init; }
     public required bool Private { get; init; }
     public string Environment { get; set; } = "dev";
     public Dictionary<string, string>? Tags { get; init; }
@@ -35,5 +29,4 @@ public class DefaultAppComponentArgs
     public Input<string> Path { get; set; } = "/";
     public Input<int> InitialDelaySeconds { get; set; } = 3;
     public Input<int> PeriodSeconds { get; set; } = 3;
-
 }

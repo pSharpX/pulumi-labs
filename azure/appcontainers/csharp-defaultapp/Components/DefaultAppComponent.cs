@@ -5,6 +5,7 @@ using defaultapp.Factories;
 using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
+using Pulumi.AzureNative.Authorization;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
@@ -113,20 +114,41 @@ public class DefaultAppComponent: ComponentResource
                 Tags = args.Tags,
             });
 
-            var roleDefinitionId = OneBankHelper.GetRoleDefinition(BuiltInRoleIds.Get(BuiltInRole.KeyVaultSecretsUser), _vault.Id).Apply(rd => rd.Id);
-            var roleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+            var kvSecretsUserRole = OneBankHelper.GetRoleDefinition(BuiltInRole.KeyVaultSecretsUser, _vault.Id).Apply(rd => rd.Id);
+            var kvAdminRole = OneBankHelper.GetRoleDefinition(BuiltInRole.KeyVaultAdministrator, _vault.Id).Apply(rd => rd.Id);
+            var appRoleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
             {
-                Name = new RandomUuid("OneBank_RoleAssignment_ManagedIdentity_Vault", new RandomUuidArgs { Keepers =
+                Name = new RandomUuid("OneBank_RoleAssignment_App_Vault_UUID", new RandomUuidArgs { Keepers =
                     {
                         { "ResourceGroupName", args.ResourceGroupName }, 
                         { "ManagedIdentityId", _managedIdentity.Id },
-                        { "RoleDefinitionId", roleDefinitionId }
+                        { "RoleDefinitionId", kvSecretsUserRole }
                     }
                 }, new CustomResourceOptions { Parent = this }).Result,
+                Alias = "App_Vault",
                 ResourceGroupName = args.ResourceGroupName,
                 Location = args.Location,
-                RoleDefinitionId = roleDefinitionId,
+                RoleDefinitionId = kvSecretsUserRole,
                 PrincipalId = _managedIdentity.PrincipalId,
+                Scope = _vault.Id,
+                Parent = this,
+                Tags = args.Tags
+            });
+            var adminRoleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+            {
+                Name = new RandomUuid("OneBank_RoleAssignment_Admin_Vault_UUID", new RandomUuidArgs { Keepers =
+                    {
+                        { "ResourceGroupName", args.ResourceGroupName }, 
+                        { "ManagedIdentityId", args.ObjectId },
+                        { "RoleDefinitionId", kvAdminRole }
+                    }
+                }, new CustomResourceOptions { Parent = this }).Result,
+                Alias = "Admin_Vault",
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                RoleDefinitionId = kvAdminRole,
+                PrincipalId = args.ObjectId,
+                PrincipalType = PrincipalType.User,
                 Scope = _vault.Id,
                 Parent = this,
                 Tags = args.Tags

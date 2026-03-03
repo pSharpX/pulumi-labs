@@ -5,6 +5,7 @@ namespace defaultapp.Factories;
 
 public class CreateRoleAssignmentArgs: CreateResourceArgs
 {
+    public required string Alias { get; set; }
     public required Input<string> PrincipalId { get; set; }
     public PrincipalType PrincipalType { get; set; } = PrincipalType.ServicePrincipal; 
     public Input<string>? Description { get; set; }

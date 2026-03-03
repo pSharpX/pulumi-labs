@@ -36,4 +36,13 @@ public static class OneBankHelper
             Scope = scope
         });
     }
+    
+    public static Output<GetRoleDefinitionResult> GetRoleDefinition(BuiltInRole builtInRole, Input<string>scope)
+    {
+        return Pulumi.AzureNative.Authorization.GetRoleDefinition.Invoke(new GetRoleDefinitionInvokeArgs
+        {
+            RoleDefinitionId = BuiltInRoleIds.Get(builtInRole),
+            Scope = scope
+        });
+    }
 }

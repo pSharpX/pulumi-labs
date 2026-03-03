@@ -7,7 +7,7 @@ public static class RoleAssignmentFactory
 {
     public static RoleAssignment Create(CreateRoleAssignmentArgs args)
     {
-        return new RoleAssignment("OneBank_RoleAssignment", new RoleAssignmentArgs
+        return new RoleAssignment($"OneBank_RoleAssignment_${args.Alias}", new RoleAssignmentArgs
         {
             RoleDefinitionId = args.RoleDefinitionId,
             PrincipalId = args.PrincipalId,

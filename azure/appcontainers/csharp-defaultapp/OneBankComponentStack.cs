@@ -46,6 +46,8 @@ public class OneBankComponentStack: Stack
         });
         _componentResource = new DefaultAppComponent("OneBankDefaultAppComponent", new DefaultAppComponentArgs
         {
+            ClientId = clientConfig.ClientId,
+            ObjectId = clientConfig.ObjectId,
             TenantId = clientConfig.TenantId,
             SubscriptionId = clientConfig.SubscriptionId,
             ResourceGroupName = _resourceGroup.Name,
