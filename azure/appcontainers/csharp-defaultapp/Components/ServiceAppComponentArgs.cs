@@ -1,6 +1,6 @@
 namespace defaultapp.components;
 
-public class ServiceAppComponentArgs: DefaultAppComponentArgs
+public class ServiceAppComponentArgs: AppComponentArgs
 {
     
 }
