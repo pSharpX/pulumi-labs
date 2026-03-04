@@ -17,6 +17,7 @@ public class OneBankComponentStack: Stack
     {
         var config = new Config();
         var location = config.Require("location");
+        var environment = config.Require("environment");
         var resourceGroupName = config.Require("resourceGroupName");
         var applicationName = config.Require("applicationName");
         var applicationId = config.Require("applicationId");
@@ -36,6 +37,7 @@ public class OneBankComponentStack: Stack
         var allowedHeaders = config.RequireObject<List<string>>("allowedHeaders");
         var enableProbes = config.RequireBoolean("enableProbes");
         var secrets = config.GetObject<List< string[]>>("secrets");
+        var appConfig = config.GetObject<List< string[]>>("appConfig");
         var tags = config.RequireObject<Dictionary<string, string>>("tags");
 
         var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
@@ -52,6 +54,7 @@ public class OneBankComponentStack: Stack
             SubscriptionId = clientConfig.SubscriptionId,
             ResourceGroupName = _resourceGroup.Name,
             Location = location,
+            Environment = environment,
             Private = isPrivate,
             AddressPrefixes = addressPrefixes!,
             SubnetAddressPrefixes = subnetAddressPrefixes!,
