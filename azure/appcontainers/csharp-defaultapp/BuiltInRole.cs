@@ -6,6 +6,8 @@ public enum BuiltInRole
     Contributor,
     StorageBlobDataReader,
     KeyVaultAdministrator,
+    KeyVaultCryptoOfficer,
+    KeyVaultCryptoUser,
     KeyVaultSecretsUser,
     AcrPull,
     AcrPush,

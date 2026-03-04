@@ -11,6 +11,8 @@ public static class BuiltInRoleIds
             [BuiltInRole.Contributor] = "b24988ac-6180-42a0-ab88-20f7382dd24c",
             [BuiltInRole.StorageBlobDataReader] = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d1",
             [BuiltInRole.KeyVaultAdministrator] = "00482a5a-887f-4fb3-b363-3b7fe8e74483",
+            [BuiltInRole.KeyVaultCryptoOfficer] = "14b46e9e-c2b7-41b4-b07b-48a6ebf60603",
+            [BuiltInRole.KeyVaultCryptoUser] = "12338af0-0e69-4776-bea7-57ae8d297424",
             [BuiltInRole.KeyVaultSecretsUser] = "4633458b-17de-408a-b874-0445c86b69e6",
             [BuiltInRole.AcrPull] = "7f951dda-4ed3-4680-a7ca-43fe172d538d",
             [BuiltInRole.AcrPush] = "8311e382-0749-4cb8-b61a-304f252e45ec",
