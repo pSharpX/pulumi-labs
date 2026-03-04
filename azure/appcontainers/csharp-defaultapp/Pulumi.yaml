@@ -104,4 +104,17 @@ config:
     type: integer
     description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1. Maximum value is 240.
     default: 3
-  
+  csharp-defaultapp:vaultEnabled:
+    type: string
+    description: Specifies whether to enable vault integration. A new vault is created if vaultId is not supplied. If neither is specified, a validation error is raised.
+    default: true
+  csharp-defaultapp:vaultId:
+    type: string
+    description: Indicates an existing vault ID to use.
+  csharp-defaultapp:configStoreEnabled:
+    type: string
+    description: Specifies whether to enable configuration store integration. A new configuration store is created if configStoreId is not supplied. If neither is specified, a validation error is raised.
+    default: true
+  csharp-defaultapp:configStoreId:
+    type: string
+    description: Indicates an existing configuration store ID to use.

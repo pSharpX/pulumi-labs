@@ -53,7 +53,7 @@ public class OneBankComponentStack: Stack
             TenantId = clientConfig.TenantId,
             SubscriptionId = clientConfig.SubscriptionId,
             ResourceGroupName = _resourceGroup.Name,
-            Location = location,
+            Location = location!,
             Environment = environment,
             Private = isPrivate,
             AddressPrefixes = addressPrefixes!,
@@ -73,6 +73,7 @@ public class OneBankComponentStack: Stack
             AllowedHeaders = allowedHeaders,
             EnableProbes = enableProbes,
             Secrets = secrets?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
+            AppConfig = appConfig?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
             Tags = tags,
         });
 

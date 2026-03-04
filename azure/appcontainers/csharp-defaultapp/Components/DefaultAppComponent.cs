@@ -138,6 +138,7 @@ public class DefaultAppComponent: ComponentResource
                     Tags = args.Tags,
                     ResourceGroupName = args.ResourceGroupName,
                     Location = null,
+                    Parent = this
                 }))
                 .ToImmutableList();
 
@@ -187,7 +188,8 @@ public class DefaultAppComponent: ComponentResource
                 Name = config.Item1,
                 Alias = config.Item2,
                 Value = config.Item3,
-                Tags = args.Tags
+                Tags = args.Tags,
+                Parent = this
             })).ToList();
         }
 
