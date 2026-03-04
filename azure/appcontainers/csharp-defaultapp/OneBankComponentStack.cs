@@ -16,7 +16,7 @@ public class OneBankComponentStack: Stack
     public OneBankComponentStack()
     {
         var config = new Config();
-        var location = config.Require("location");
+        var location = config.Get("location");
         var environment = config.Require("environment");
         var resourceGroupName = config.Require("resourceGroupName");
         var applicationName = config.Require("applicationName");

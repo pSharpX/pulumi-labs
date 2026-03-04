@@ -5,7 +5,7 @@ using defaultapp.Factories;
 using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
-using Pulumi.AzureNative.Authorization;
+using Pulumi.AzureNative.AppConfiguration;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
@@ -20,12 +20,13 @@ namespace defaultapp.components;
 
 public class DefaultAppComponent: ComponentResource
 {
+    private readonly UserAssignedIdentity _managedIdentity;
     private readonly Workspace _workspace;
     private readonly ManagedEnvironment _managedEnvironment;
     
     private VirtualNetwork? _virtualNetwork;
-    private UserAssignedIdentity? _managedIdentity;
     private Vault? _vault;
+    private ConfigurationStore? _configurationStore;
     private ImmutableList<Secret>? _secrets;
     
     public Output<string> Endpoint { get; }
@@ -33,6 +34,15 @@ public class DefaultAppComponent: ComponentResource
     public DefaultAppComponent(string name, DefaultAppComponentArgs args, ComponentResourceOptions? options = null) 
         : base("custom:components:DefaultAppComponent", name, options)
     {
+        _managedIdentity = UserAssignedIdentityFactory.Create(new CreateUserAssignedIdentityArgs
+        {
+            Name = Output.Format($"{args.ParentName}-managed-identity-{args.Environment}"),
+            Location = args.Location,
+            ResourceGroupName = args.ResourceGroupName,
+            Parent = this,
+            Tags = args.Tags
+        });
+        
         _workspace = new Workspace("OneBank_OperationalInsightsWorkspace", new WorkspaceArgs
         {
             ResourceGroupName = args.ResourceGroupName,
@@ -85,25 +95,10 @@ public class DefaultAppComponent: ComponentResource
                 },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent =  this });
-
-        ManagedServiceIdentityArgs? identity = null;
+        
         List<SecretArgs> secretListArgs = [];
         if (!args.Secrets.IsEmpty)
         {
-            _managedIdentity = UserAssignedIdentityFactory.Create(new CreateUserAssignedIdentityArgs
-            {
-                Name = Output.Format($"{args.ParentName}-managed-identity-{args.Environment}"),
-                Location = args.Location,
-                ResourceGroupName = args.ResourceGroupName,
-                Parent = this,
-                Tags = args.Tags
-            });
-            identity = new ManagedServiceIdentityArgs
-            {
-                Type = ManagedServiceIdentityType.UserAssigned,
-                UserAssignedIdentities = new[] { _managedIdentity.Id }
-            };
-                
             _vault = VaultFactory.Create(new CreateVaultArgs
             {
                 Name = Output.Format($"{args.ParentName}-vault-{args.Environment}"),
@@ -115,8 +110,7 @@ public class DefaultAppComponent: ComponentResource
             });
 
             var kvSecretsUserRole = OneBankHelper.GetRoleDefinition(BuiltInRole.KeyVaultSecretsUser, _vault.Id).Apply(rd => rd.Id);
-            var kvAdminRole = OneBankHelper.GetRoleDefinition(BuiltInRole.KeyVaultAdministrator, _vault.Id).Apply(rd => rd.Id);
-            var appRoleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+            RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
             {
                 Name = new RandomUuid("OneBank_RoleAssignment_App_Vault_UUID", new RandomUuidArgs { Keepers =
                     {
@@ -130,25 +124,6 @@ public class DefaultAppComponent: ComponentResource
                 Location = args.Location,
                 RoleDefinitionId = kvSecretsUserRole,
                 PrincipalId = _managedIdentity.PrincipalId,
-                Scope = _vault.Id,
-                Parent = this,
-                Tags = args.Tags
-            });
-            var adminRoleAssignment = RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
-            {
-                Name = new RandomUuid("OneBank_RoleAssignment_Admin_Vault_UUID", new RandomUuidArgs { Keepers =
-                    {
-                        { "ResourceGroupName", args.ResourceGroupName }, 
-                        { "ManagedIdentityId", args.ObjectId },
-                        { "RoleDefinitionId", kvAdminRole }
-                    }
-                }, new CustomResourceOptions { Parent = this }).Result,
-                Alias = "Admin_Vault",
-                ResourceGroupName = args.ResourceGroupName,
-                Location = args.Location,
-                RoleDefinitionId = kvAdminRole,
-                PrincipalId = args.ObjectId,
-                PrincipalType = PrincipalType.User,
                 Scope = _vault.Id,
                 Parent = this,
                 Tags = args.Tags
@@ -172,6 +147,48 @@ public class DefaultAppComponent: ComponentResource
                 KeyVaultUrl = secret.Properties.Apply(props => props.SecretUri),
                 Name = secret.Name
             }).ToList();
+        }
+
+        List<KeyValue>? appConfigListArgs = [];
+        if (!args.AppConfig.IsEmpty)
+        {
+            _configurationStore = ConfigurationStoreFactory.Create(new CreateConfigurationStoreArgs
+            {
+                Name = Output.Format($"{args.ParentName}-configStore-{args.Environment}"),
+                Location = args.Location,
+                ResourceGroupName = args.ResourceGroupName,
+                Parent = this,
+                Tags = args.Tags,
+            });
+            var appConfigDataReaderRole = OneBankHelper.GetRoleDefinition(BuiltInRole.AppConfigurationDataReader, _configurationStore.Id).Apply(rd => rd.Id);
+            RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+            {
+                Name = new RandomUuid("OneBank_RoleAssignment_App_ConfigStore_UUID", new RandomUuidArgs { Keepers =
+                    {
+                        { "ResourceGroupName", args.ResourceGroupName }, 
+                        { "ManagedIdentityId", _managedIdentity.Id },
+                        { "RoleDefinitionId", appConfigDataReaderRole }
+                    }
+                }, new CustomResourceOptions { Parent = this }).Result,
+                Alias = "App_ConfigStore",
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                RoleDefinitionId = appConfigDataReaderRole,
+                PrincipalId = _managedIdentity.PrincipalId,
+                Scope = _configurationStore.Id,
+                Parent = this,
+                Tags = args.Tags
+            });
+
+            appConfigListArgs = args.AppConfig.Select(config => KeyValueFactory.Create(new CreateKeyValueArgs
+            {
+                ConfigStoreName = _configurationStore.Name,
+                ResourceGroupName = args.ResourceGroupName,
+                Name = config.Item1,
+                Alias = config.Item2,
+                Value = config.Item3,
+                Tags = args.Tags
+            })).ToList();
         }
 
         List<ContainerAppProbeArgs> probes = [];
@@ -201,7 +218,11 @@ public class DefaultAppComponent: ComponentResource
             Location = args.Location,
             ContainerAppName = Output.Format($"{args.Name}-app-{args.Environment}"),
             EnvironmentId =  _managedEnvironment.Id,
-            Identity = identity!,
+            Identity = new ManagedServiceIdentityArgs
+            {
+                Type = ManagedServiceIdentityType.UserAssigned,
+                UserAssignedIdentities = new[] { _managedIdentity.Id }
+            },
             Configuration = new ConfigurationArgs
             {
                 Ingress = new IngressArgs
@@ -220,7 +241,7 @@ public class DefaultAppComponent: ComponentResource
             },
             Template = new TemplateArgs
             {
-                RevisionSuffix = Output.Format($"{args.Name}-app-{args.Environment}"),
+                RevisionSuffix = Output.Format($"{args.ParentName}"),
                 Containers = new[]
                 {
                     new ContainerArgs

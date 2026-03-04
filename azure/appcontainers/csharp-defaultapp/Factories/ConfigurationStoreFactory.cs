@@ -8,6 +8,18 @@ public static class ConfigurationStoreFactory
 {
     public static ConfigurationStore Create(CreateConfigurationStoreArgs args)
     {
+        EncryptionPropertiesArgs? encryptionPropertiesArgs = null;
+        if (args.EncryptionEnabled)
+        {
+            encryptionPropertiesArgs = new EncryptionPropertiesArgs
+            {
+                KeyVaultProperties = new KeyVaultPropertiesArgs
+                {
+                    IdentityClientId = args.VaultIdentity,
+                    KeyIdentifier = args.VaultKeyIdentifier
+                }
+            };
+        }
         return new ConfigurationStore($"OneBank_ConfigStore", new ConfigurationStoreArgs
         {
             ConfigStoreName = args.Name,
@@ -21,6 +33,7 @@ public static class ConfigurationStoreFactory
                 Name = args.SkuName,
             },
             SoftDeleteRetentionInDays =  args.SoftDeleteRetentionInDays,
+            Encryption =encryptionPropertiesArgs!, 
             Tags = args.Tags!,
         }, new CustomResourceOptions{ Parent = args.Parent });
     }

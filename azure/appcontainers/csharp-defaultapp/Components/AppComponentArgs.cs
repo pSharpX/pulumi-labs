@@ -11,6 +11,6 @@ public abstract class AppComponentArgs
     public required Input<string> Name { get; init; }
     public required Input<string> ParentName { get; init; }
     public required Input<string> ResourceGroupName { get; init; }
-    public required Input<string>? Location { get; init; }
+    public Input<string>? Location { get; init; }
     public string Environment { get; init; } = "dev";
 }
