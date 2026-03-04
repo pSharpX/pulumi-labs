@@ -25,7 +25,7 @@ public static class VaultFactory
                 }).ToList() !
             }
             : null;
-        return new Vault($"OneBank-Vault", new VaultArgs
+        return new Vault($"OneBank_Vault", new VaultArgs
         {
             VaultName = args.Name,
             ResourceGroupName = args.ResourceGroupName,

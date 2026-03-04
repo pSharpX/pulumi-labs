@@ -7,7 +7,7 @@ public static class KeyValueFactory
 {
     public static KeyValue Create(CreateKeyValueArgs args)
     {
-        return new KeyValue($"OneBank_KeyValue_{args.Alias}", new KeyValueArgs
+        return new KeyValue($"OneBank_ConfigStore_KeyValue_{args.Alias}", new KeyValueArgs
         {
             ResourceGroupName =  args.ResourceGroupName,
             ConfigStoreName =  args.ConfigStoreName,
