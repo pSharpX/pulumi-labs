@@ -11,6 +11,7 @@ using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
+using Pulumi.AzureNative.Storage;
 using Pulumi.Random;
 using ManagedServiceIdentityArgs = Pulumi.AzureNative.App.Inputs.ManagedServiceIdentityArgs;
 using ManagedServiceIdentityType = Pulumi.AzureNative.App.ManagedServiceIdentityType;
@@ -25,8 +26,16 @@ public class DefaultAppComponent: ComponentResource
     private readonly ManagedEnvironment _managedEnvironment;
     
     private VirtualNetwork? _virtualNetwork;
+    
     private Vault? _vault;
+    private Output<GetVaultResult>? _existentVault;
+    
     private ConfigurationStore? _configurationStore;
+    private Output<GetConfigurationStoreResult>? _existentConfigStore;
+
+    private StorageAccount? _storageAccount;
+    private Output<GetStorageAccountResult>? _existentStorageAccount;
+    
     private ImmutableList<Secret>? _secrets;
     
     public Output<string> Endpoint { get; }
@@ -42,6 +51,10 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags
         });
+        
+        InitializeVault(args);
+        InitializeConfigStore(args);
+        InitializeStorageAccount(args);
         
         _workspace = new Workspace("OneBank_OperationalInsightsWorkspace", new WorkspaceArgs
         {
@@ -97,41 +110,11 @@ public class DefaultAppComponent: ComponentResource
         }, new CustomResourceOptions { Parent =  this });
         
         List<SecretArgs> secretListArgs = [];
-        if (!args.Secrets.IsEmpty)
+        if (args is { EnableVault: true, Secrets.IsEmpty: false })
         {
-            _vault = VaultFactory.Create(new CreateVaultArgs
-            {
-                Name = Output.Format($"{args.ParentName}-vault-{args.Environment}"),
-                TenantId = args.TenantId,
-                Location = args.Location,
-                ResourceGroupName = args.ResourceGroupName,
-                Parent = this,
-                Tags = args.Tags,
-            });
-
-            var kvSecretsUserRole = OneBankHelper.GetRoleDefinition(BuiltInRole.KeyVaultSecretsUser, _vault.Id).Apply(rd => rd.Id);
-            RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
-            {
-                Name = new RandomUuid("OneBank_RoleAssignment_App_Vault_UUID", new RandomUuidArgs { Keepers =
-                    {
-                        { "ResourceGroupName", args.ResourceGroupName }, 
-                        { "ManagedIdentityId", _managedIdentity.Id },
-                        { "RoleDefinitionId", kvSecretsUserRole }
-                    }
-                }, new CustomResourceOptions { Parent = this }).Result,
-                Alias = "App_Vault",
-                ResourceGroupName = args.ResourceGroupName,
-                Location = args.Location,
-                RoleDefinitionId = kvSecretsUserRole,
-                PrincipalId = _managedIdentity.PrincipalId,
-                Scope = _vault.Id,
-                Parent = this,
-                Tags = args.Tags
-            });
-
             _secrets = args.Secrets.Select(secret => SecretFactory.Create(new CreateSecretArgs
                 {
-                    VaultName = _vault.Name,
+                    VaultName = (_vault?.Name ?? _existentVault?.Apply(vault => vault.Name))!,
                     Name = secret.Item1,
                     Alias = secret.Item2,
                     Value = secret.Item3,
@@ -149,41 +132,13 @@ public class DefaultAppComponent: ComponentResource
                 Name = secret.Name
             }).ToList();
         }
-
-        List<KeyValue>? appConfigListArgs = [];
-        if (!args.AppConfig.IsEmpty)
+        
+        if (args is { EnableConfigStore: true,  AppConfig.IsEmpty: false })
         {
-            _configurationStore = ConfigurationStoreFactory.Create(new CreateConfigurationStoreArgs
+            args.AppConfig.Select(config => KeyValueFactory.Create(new CreateKeyValueArgs
             {
-                Name = Output.Format($"{args.ParentName}-configStore-{args.Environment}"),
-                Location = args.Location,
-                ResourceGroupName = args.ResourceGroupName,
-                Parent = this,
-                Tags = args.Tags,
-            });
-            var appConfigDataReaderRole = OneBankHelper.GetRoleDefinition(BuiltInRole.AppConfigurationDataReader, _configurationStore.Id).Apply(rd => rd.Id);
-            RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
-            {
-                Name = new RandomUuid("OneBank_RoleAssignment_App_ConfigStore_UUID", new RandomUuidArgs { Keepers =
-                    {
-                        { "ResourceGroupName", args.ResourceGroupName }, 
-                        { "ManagedIdentityId", _managedIdentity.Id },
-                        { "RoleDefinitionId", appConfigDataReaderRole }
-                    }
-                }, new CustomResourceOptions { Parent = this }).Result,
-                Alias = "App_ConfigStore",
-                ResourceGroupName = args.ResourceGroupName,
-                Location = args.Location,
-                RoleDefinitionId = appConfigDataReaderRole,
-                PrincipalId = _managedIdentity.PrincipalId,
-                Scope = _configurationStore.Id,
-                Parent = this,
-                Tags = args.Tags
-            });
-
-            appConfigListArgs = args.AppConfig.Select(config => KeyValueFactory.Create(new CreateKeyValueArgs
-            {
-                ConfigStoreName = _configurationStore.Name,
+                ConfigStoreName = (_configurationStore?.Name ??
+                                   _existentConfigStore?.Apply(configStore => configStore.Name))!,
                 ResourceGroupName = args.ResourceGroupName,
                 Name = config.Item1,
                 Alias = config.Item2,
@@ -200,8 +155,8 @@ public class DefaultAppComponent: ComponentResource
             [
                 new ContainerAppProbeArgs
                 {
-                    FailureThreshold = 3,
-                    HttpGet = new ContainerAppProbeHttpGetArgs
+                    FailureThreshold= 3,
+                    HttpGet= new ContainerAppProbeHttpGetArgs
                     {
                         Port = args.Port,
                         Path = args.Path
@@ -209,7 +164,7 @@ public class DefaultAppComponent: ComponentResource
                     InitialDelaySeconds = args.InitialDelaySeconds,
                     PeriodSeconds = args.PeriodSeconds,
                     SuccessThreshold = 1,
-                    Type = Pulumi.AzureNative.App.Type.Liveness
+                    Type = Type.Liveness
                 }
             ];
         }
@@ -287,6 +242,129 @@ public class DefaultAppComponent: ComponentResource
         RegisterOutputs(new Dictionary<string, object?>
         {
             {"Endpoint", Endpoint}
+        });
+    }
+
+    private void InitializeVault(DefaultAppComponentArgs args)
+    {
+        if (!args.EnableVault) return;
+        
+        if (!string.IsNullOrEmpty(args.VaultName))
+        {
+            _existentVault = OneBankHelper.GetKeyVault(args.ResourceGroupName, args.VaultName);
+             return;
+        }
+
+        _vault = VaultFactory.Create(new CreateVaultArgs
+        {
+            Name = Output.Format($"{args.ParentName}-vault-{args.Environment}"),
+            TenantId = args.TenantId,
+            Location = args.Location,
+            ResourceGroupName = args.ResourceGroupName,
+            Parent = this,
+            Tags = args.Tags,
+        });
+        
+        var kvSecretsUserRole = OneBankHelper.GetRoleDefinition(BuiltInRole.KeyVaultSecretsUser, _vault.Id).Apply(rd => rd.Id);
+        RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+        {
+            Name = new RandomUuid("OneBank_RoleAssignment_App_Vault_UUID", new RandomUuidArgs { Keepers =
+                {
+                    { "ResourceGroupName", args.ResourceGroupName }, 
+                    { "ManagedIdentityId", _managedIdentity.Id },
+                    { "RoleDefinitionId", kvSecretsUserRole }
+                }
+            }, new CustomResourceOptions { Parent = this }).Result,
+            Alias = "App_Vault",
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            RoleDefinitionId = kvSecretsUserRole,
+            PrincipalId = _managedIdentity.PrincipalId,
+            Scope = _vault.Id,
+            Parent = this,
+            Tags = args.Tags
+        });
+    }
+    
+    private void InitializeConfigStore(DefaultAppComponentArgs args)
+    {
+        if (!args.EnableConfigStore) return;
+        
+        if (!string.IsNullOrEmpty(args.ConfigStoreName))
+        {
+            _existentConfigStore = OneBankHelper.GetConfigStore(args.ResourceGroupName, args.ConfigStoreName);
+            return;
+        }
+
+        _configurationStore = ConfigurationStoreFactory.Create(new CreateConfigurationStoreArgs
+        {
+            Name = Output.Format($"{args.ParentName}-configStore-{args.Environment}"),
+            Location = args.Location,
+            ResourceGroupName = args.ResourceGroupName,
+            Parent = this,
+            Tags = args.Tags,
+        });
+        
+        var appConfigDataReaderRole = OneBankHelper.GetRoleDefinition(BuiltInRole.AppConfigurationDataReader, _configurationStore.Id).Apply(rd => rd.Id);
+        RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+        {
+            Name = new RandomUuid("OneBank_RoleAssignment_App_ConfigStore_UUID", new RandomUuidArgs { Keepers =
+                {
+                    { "ResourceGroupName", args.ResourceGroupName }, 
+                    { "ManagedIdentityId", _managedIdentity.Id },
+                    { "RoleDefinitionId", appConfigDataReaderRole }
+                }
+            }, new CustomResourceOptions { Parent = this }).Result,
+            Alias = "App_ConfigStore",
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            RoleDefinitionId = appConfigDataReaderRole,
+            PrincipalId = _managedIdentity.PrincipalId,
+            Scope = _configurationStore.Id,
+            Parent = this,
+            Tags = args.Tags
+        });
+    }
+    
+    private void InitializeStorageAccount(DefaultAppComponentArgs args)
+    {
+        if (!args.EnableStorage) return;
+        
+        if (!string.IsNullOrEmpty(args.StorageAccountName))
+        {
+            _existentStorageAccount = OneBankHelper.GetStorage(args.ResourceGroupName, args.StorageAccountName);
+            return;
+        }
+
+        _storageAccount = StorageAccountFactory.Create(new CreateStorageAccountArgs
+        {
+            Name = Output.Format($"{args.ParentName}sa{args.Environment}"),
+            Location = args.Location,
+            ResourceGroupName = args.ResourceGroupName,
+            Parent = this,
+            EncryptionEnabled =  args.EnableEncryption,
+            ImmutableStorageEnabled = false,
+            Tags = args.Tags,
+        });
+        
+        var storageBlobDataReaderRole = OneBankHelper.GetRoleDefinition(BuiltInRole.StorageBlobDataReader, _storageAccount.Id).Apply(rd => rd.Id);
+        RoleAssignmentFactory.Create(new CreateRoleAssignmentArgs
+        {
+            Name = new RandomUuid("OneBank_RoleAssignment_App_StorageAccount_UUID", new RandomUuidArgs { Keepers =
+                {
+                    { "ResourceGroupName", args.ResourceGroupName }, 
+                    { "ManagedIdentityId", _managedIdentity.Id },
+                    { "RoleDefinitionId", storageBlobDataReaderRole }
+                }
+            }, new CustomResourceOptions { Parent = this }).Result,
+            Alias = "App_StorageAccount",
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            RoleDefinitionId = storageBlobDataReaderRole,
+            PrincipalId = _managedIdentity.PrincipalId,
+            Scope = _storageAccount.Id,
+            Parent = this,
+            Tags = args.Tags
         });
     }
 }

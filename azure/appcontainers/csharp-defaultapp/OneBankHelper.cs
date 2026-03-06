@@ -1,5 +1,10 @@
 using System.Threading.Tasks;
+using Pulumi.AzureNative.AppConfiguration;
 using Pulumi.AzureNative.Authorization;
+using Pulumi.AzureNative.ContainerRegistry;
+using Pulumi.AzureNative.KeyVault;
+using Pulumi.AzureNative.Network;
+using Pulumi.AzureNative.Storage;
 
 namespace defaultapp;
 
@@ -43,6 +48,51 @@ public static class OneBankHelper
         {
             RoleDefinitionId = BuiltInRoleIds.Get(builtInRole),
             Scope = scope
+        });
+    }
+    
+    public static Output<GetConfigurationStoreResult> GetConfigStore(Input<string> resourceGroupName, Input<string> configStoreName)
+    {
+        return GetConfigurationStore.Invoke(new GetConfigurationStoreInvokeArgs
+        {
+            ResourceGroupName = resourceGroupName,
+            ConfigStoreName = configStoreName
+        });
+    }
+    
+    public static Output<GetRegistryResult> GetContainerRegistry(Input<string> resourceGroupName, Input<string> registryName)
+    {
+        return GetRegistry.Invoke(new GetRegistryInvokeArgs
+        {
+            ResourceGroupName = resourceGroupName, 
+            RegistryName = registryName,
+        });
+    }
+    
+    public static Output<GetStorageAccountResult> GetStorage(Input<string> resourceGroupName, Input<string> accountName)
+    {
+        return GetStorageAccount.Invoke(new GetStorageAccountInvokeArgs()
+        {
+            ResourceGroupName = resourceGroupName, 
+            AccountName = accountName
+        });
+    }
+    
+    public static Output<GetVaultResult> GetKeyVault(Input<string> resourceGroupName, Input<string> vaultName)
+    {
+        return GetVault.Invoke(new GetVaultInvokeArgs
+        {
+            ResourceGroupName = resourceGroupName,
+            VaultName = vaultName
+        });
+    }
+    
+    public static Output<GetVirtualNetworkResult> GetVNet(Input<string> resourceGroupName, Input<string> virtualNetworkName)
+    {
+        return GetVirtualNetwork.Invoke(new GetVirtualNetworkInvokeArgs
+        {
+            ResourceGroupName = resourceGroupName, 
+            VirtualNetworkName = virtualNetworkName
         });
     }
 }

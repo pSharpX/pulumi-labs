@@ -18,6 +18,7 @@ public class OneBankComponentStack: Stack
         var config = new Config();
         var location = config.Get("location");
         var environment = config.Require("environment");
+        var tags = config.RequireObject<Dictionary<string, string>>("tags");
         var resourceGroupName = config.Require("resourceGroupName");
         var applicationName = config.Require("applicationName");
         var applicationId = config.Require("applicationId");
@@ -38,7 +39,16 @@ public class OneBankComponentStack: Stack
         var enableProbes = config.RequireBoolean("enableProbes");
         var secrets = config.GetObject<List< string[]>>("secrets");
         var appConfig = config.GetObject<List< string[]>>("appConfig");
-        var tags = config.RequireObject<Dictionary<string, string>>("tags");
+        var enableVault = config.RequireBoolean("enableVault");
+        var keyVaultName = config.Get("vaultName");
+        var enableConfigStore = config.RequireBoolean("enableConfigStore");
+        var configStoreName = config.Get("configStoreName");
+        var enableRegistry = config.RequireBoolean("enableRegistry");
+        var registryName = config.Get("registryName");
+        var enableEncryption = config.RequireBoolean("enableEncryption");
+        var encryptionKeyName = config.Get("encryptionKeyName");
+        var enableStorage = config.RequireBoolean("enableStorage");
+        var storageAccountName = config.Get("storageAccountName");
 
         var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
         _resourceGroup = new ResourceGroup("TeamLvX_rg", new ResourceGroupArgs
@@ -74,6 +84,16 @@ public class OneBankComponentStack: Stack
             EnableProbes = enableProbes,
             Secrets = secrets?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
             AppConfig = appConfig?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
+            EnableVault = enableVault,
+            VaultName = keyVaultName,
+            EnableConfigStore = enableConfigStore,
+            ConfigStoreName = configStoreName,
+            EnableStorage = enableStorage,
+            StorageAccountName = storageAccountName,
+            EnableEncryption = enableEncryption,
+            EncryptionKeyName = encryptionKeyName,
+            EnableRegistry = enableRegistry,
+            RegistryName = registryName,
             Tags = tags,
         });
 

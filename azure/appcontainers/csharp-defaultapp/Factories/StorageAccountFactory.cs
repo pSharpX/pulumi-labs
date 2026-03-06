@@ -29,7 +29,7 @@ public static class StorageAccountFactory
             },
             MinimumTlsVersion = args.MinimumTlsVersion,
             EnableHttpsTrafficOnly = args.EnableHttpsTrafficOnly,
-            AccessTier =  Enum.Parse<AccessTier>(args.AccessTier),
+            AccessTier =  args.AccessTier,
             PublicNetworkAccess = args.PublicNetworkAccess,
             AllowBlobPublicAccess = args.AllowBlobPublicAccess,
             AllowSharedKeyAccess = args.AllowSharedKeyAccess,
