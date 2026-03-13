@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -11,11 +12,13 @@ using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
+using Pulumi.AzureNative.Sql;
 using Pulumi.AzureNative.Storage;
 using Pulumi.Random;
 using ManagedServiceIdentityArgs = Pulumi.AzureNative.App.Inputs.ManagedServiceIdentityArgs;
 using ManagedServiceIdentityType = Pulumi.AzureNative.App.ManagedServiceIdentityType;
 using SecretArgs = Pulumi.AzureNative.App.Inputs.SecretArgs;
+using Type = Pulumi.AzureNative.App.Type;
 
 namespace defaultapp.components;
 
@@ -36,6 +39,9 @@ public class DefaultAppComponent: ComponentResource
     private StorageAccount? _storageAccount;
     private Output<GetStorageAccountResult>? _existentStorageAccount;
     
+    private Server? _sqlServer;
+    private Database? _sqlDatabase;
+    
     private ImmutableList<Secret>? _secrets;
     
     public Output<string> Endpoint { get; }
@@ -55,6 +61,7 @@ public class DefaultAppComponent: ComponentResource
         InitializeVault(args);
         InitializeConfigStore(args);
         InitializeStorageAccount(args);
+        InitializeDatabase(args);
         
         _workspace = new Workspace("OneBank_OperationalInsightsWorkspace", new WorkspaceArgs
         {
@@ -365,6 +372,37 @@ public class DefaultAppComponent: ComponentResource
             Scope = _storageAccount.Id,
             Parent = this,
             Tags = args.Tags
+        });
+    }
+
+    private void InitializeDatabase(DefaultAppComponentArgs args)
+    {
+        if (!args.EnableDatabase) return;
+        
+        if (args.Database is null)
+            throw new ArgumentNullException(nameof(args.Database));
+
+        _sqlServer = SqlServerFactory.Create(new CreateSqlServerArgs
+        {
+            Name = Output.Format($"{args.ParentName}-server-{args.Environment}"),
+            Alias = args.Database!,
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            AdministratorLogin = args.Username!,
+            AdministratorLoginPassword = args.Password!,
+            Parent = this,
+            Tags = args.Tags,
+        });
+
+        _sqlDatabase = SqlDatabaseFactory.Create(new CreateSqlDatabaseArgs
+        {
+            Name = Output.Format($"{args.Name}-database-{args.Environment}"),
+            ServerName = _sqlServer.Name,
+            Alias = args.Database!,
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags,
         });
     }
 }

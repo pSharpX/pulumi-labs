@@ -23,4 +23,6 @@ public abstract class AppComponentArgs
     public string? RegistryName { get; init; }
     public bool EnableEncryption { get; init; }
     public string? EncryptionKeyName { get; init; }
+    public bool EnableDatabase { get; init; }
+    public string DatabaseEngine { get; init; } = "mssql";
 }

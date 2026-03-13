@@ -139,3 +139,11 @@ config:
   csharp-defaultapp:encryptionKeyName:
     type: string
     description: Indicates an existing key name to use.
+  csharp-defaultapp:enableDatabase:
+    type: boolean
+    description: Determine whether database integration is enabled. A new server & database resources are created if it's enabled and database credentials are provided.
+    default: false
+  csharp-defaultapp:databaseEngine:
+    type: string
+    description: Determine which database engine will be used if database integration is enabled.
+    default: mssql

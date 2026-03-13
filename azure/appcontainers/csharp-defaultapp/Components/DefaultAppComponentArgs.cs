@@ -29,4 +29,7 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public Input<string> Path { get; set; } = "/";
     public Input<int> InitialDelaySeconds { get; set; } = 3;
     public Input<int> PeriodSeconds { get; set; } = 3;
+    public Input<string>? Username { get; init; }
+    public Input<string>? Password { get; init; }
+    public string? Database { get; init; }
 }

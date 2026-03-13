@@ -49,6 +49,11 @@ public class OneBankComponentStack: Stack
         var encryptionKeyName = config.Get("encryptionKeyName");
         var enableStorage = config.RequireBoolean("enableStorage");
         var storageAccountName = config.Get("storageAccountName");
+        var enableDatabase = config.RequireBoolean("enableDatabase");
+        var databaseEngine = config.Get("databaseEngine");
+        var databaseUsername = config.Get("databaseUsername");
+        var databasePassword = config.Get("databasePassword");
+        var databaseName = config.Get("databaseName");
 
         var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
         _resourceGroup = new ResourceGroup("TeamLvX_rg", new ResourceGroupArgs
@@ -94,6 +99,11 @@ public class OneBankComponentStack: Stack
             EncryptionKeyName = encryptionKeyName,
             EnableRegistry = enableRegistry,
             RegistryName = registryName,
+            EnableDatabase = enableDatabase,
+            DatabaseEngine = databaseEngine!,
+            Username = databaseUsername!,
+            Password = databasePassword!,
+            Database = databaseName!,
             Tags = tags,
         });
 
