@@ -27,12 +27,16 @@ public class DefaultAppComponent: ComponentResource
     private readonly UserAssignedIdentity _managedIdentity;
     private readonly Workspace _workspace;
     private readonly ManagedEnvironment _managedEnvironment;
-    
+    private readonly ContainerApp _containerApp;
+
+    private PublicIPAddress? _publicIpAddress;
+    private ApplicationGateway? _applicationGateway;
     private VirtualNetwork? _virtualNetwork;
     private Output<GetVirtualNetworkResult>? _existentVirtualNetwork;
     private List<Subnet>? _subnets;
     private Output<GetSubnetResult>? _existentSubnet;
-    private Output<string>? _subnetId;
+    private Output<string>? _defaultPrivateSubnetId;
+    private Output<string>? _defaultPublicSubnetId;
     
     private Vault? _vault;
     private Output<GetVaultResult>? _existentVault;
@@ -100,7 +104,7 @@ public class DefaultAppComponent: ComponentResource
                 new VnetConfigurationArgs
                 {
                     Internal = args.Private,
-                    InfrastructureSubnetId = _subnetId!
+                    InfrastructureSubnetId = _defaultPrivateSubnetId!
                 } : new VnetConfigurationArgs
                 {
                     Internal = args.Private,
@@ -168,7 +172,7 @@ public class DefaultAppComponent: ComponentResource
             ];
         }
         
-        var containerApp = new ContainerApp("OneBank_ContainerApp", new ContainerAppArgs
+        _containerApp = new ContainerApp("OneBank_ContainerApp", new ContainerAppArgs
         {
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
@@ -236,11 +240,43 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });
 
-        Endpoint = containerApp.Configuration.Apply(configuration => $"https://{configuration?.Ingress?.Fqdn!}");
+        Endpoint = _containerApp.Configuration.Apply(configuration => configuration?.Ingress?.Fqdn!);
+
+        if (args.Private)
+        {
+            _publicIpAddress = PublicIpAddressFactory.Create(new CreatePublicIpAddressArgs
+            {
+                Name = Output.Format($"{args.ParentName}-public-ip-{args.Environment}"),
+                Alias = "bookstore",
+                DnsNameLabel = args.ParentName,
+                SkuName = "Standard",
+                IpAllocationMethod = "Static",
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                Parent =  this,
+                Tags = args.Tags,
+            });
+            
+            _applicationGateway = ApplicationGatewayFactory.Create(new CreateApplicationGatewayArgs
+            {
+                Name = Output.Format($"{args.ParentName}-alb-{args.Environment}"),
+                ResourceGroupName = args.ResourceGroupName,
+                SubscriptionId = args.SubscriptionId,
+                Location = args.Location,
+                BackendFqdn = [Endpoint],
+                PublicIpAddressId = _publicIpAddress.Id,
+                SubnetId = Output.Tuple(_defaultPublicSubnetId!, _defaultPrivateSubnetId!)
+                    .Apply(items => items.Item1 ?? items.Item2),
+                Parent =  this,
+                Tags = args.Tags,
+            }).Result;
+
+            Endpoint = _publicIpAddress.DnsSettings.Apply(dns => dns?.Fqdn)!;
+        }
         
         RegisterOutputs(new Dictionary<string, object?>
         {
-            {"Endpoint", Endpoint}
+            {"Endpoint", Output.Format($"https://{Endpoint}")}
         });
     }
 
@@ -300,6 +336,7 @@ public class DefaultAppComponent: ComponentResource
             Name = Output.Format($"{args.ParentName}-configStore-{args.Environment}"),
             Location = args.Location,
             ResourceGroupName = args.ResourceGroupName,
+            DisableLocalAuth = false,
             Parent = this,
             Tags = args.Tags,
         });
@@ -406,7 +443,7 @@ public class DefaultAppComponent: ComponentResource
         {
             _existentVirtualNetwork = OneBankHelper.GetVirtualNetwork(args.ResourceGroupName, args.VirtualNetworkConfig?.Name!);
             _existentSubnet = OneBankHelper.GetSubnet(args.ResourceGroupName, args.VirtualNetworkConfig?.Name!, args.VirtualNetworkConfig?.SubnetId!);
-            _subnetId = _existentSubnet.Apply(subnet => subnet.Id)!;
+            _defaultPrivateSubnetId = _existentSubnet.Apply(subnet => subnet.Id)!;
             return;    
         }
 
@@ -434,6 +471,7 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags
         })).ToList();
         
-        _subnetId = _subnets?[0].Id!;
+        _defaultPrivateSubnetId = _subnets?[0].Id!;
+        _defaultPublicSubnetId = _subnets?[3].Id!;
     }
 }

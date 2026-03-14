@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Pulumi;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.Network.Inputs;
@@ -8,115 +10,225 @@ namespace defaultapp.Factories;
 
 public static class ApplicationGatewayFactory
 {
-    public static ApplicationGateway Create(CreateApplicationGatewayArgs args)
+    public static async Task<ApplicationGateway> Create(CreateApplicationGatewayArgs args)
     {
         List<ApplicationGatewayIPConfigurationArgs> gatewayIpConfigurations = [];
-        if (args.GatewayIpConfigurations.Count > 0)
+        List<ApplicationGatewayBackendAddressPoolArgs> backendAddressPools = [];
+        List<ApplicationGatewayFrontendIPConfigurationArgs> frontendIpConfigurations = [];
+        List<ApplicationGatewayFrontendPortArgs> frontendPorts = [];
+        List<ApplicationGatewayHttpListenerArgs> httpListeners = [];
+        List<ApplicationGatewayBackendHttpSettingsArgs> backendHttpSettingsCollection = [];
+        List<ApplicationGatewayRequestRoutingRuleArgs> requestRoutingRules = [];
+        
+        if (await args.BackendFqdn.CountAsync() > 0)
         {
-            gatewayIpConfigurations = args.GatewayIpConfigurations
-                .Select(config => new ApplicationGatewayIPConfigurationArgs
+            args.SubnetId?.Ensure(value => !string.IsNullOrEmpty(value), $"{nameof(args.SubnetId)}");
+            args.PublicIpAddressId?.Ensure(value => !string.IsNullOrEmpty(value), $"{nameof(args.PublicIpAddressId)}");
+            
+            Output<string> defaultBackendPool = Output.Format($"{args.Name}-backend-pool");
+            Output<string> defaultGatewayIpConfig = Output.Format($"{args.Name}-alb-ipconfig");
+            Output<string> defaultFrontendIpConfig = Output.Format($"{args.Name}-frontend-ipconfig");
+            Output<string> defaultFrontendPorts = Output.Format($"{args.Name}-frontend-ports");
+            Output<string> defaultHttpListener = Output.Format($"{args.Name}-listener");
+            Output<string> defaultBackendHttpSettings = Output.Format($"{args.Name}-backend-settings");
+            Output<string> defaultRoutingRules = Output.Format($"{args.Name}-routing-rules");
+            
+            backendAddressPools =
+            [
+                new ApplicationGatewayBackendAddressPoolArgs
                 {
-                    Name =  config.Item1,
+                    Name = defaultBackendPool,
+                    BackendAddresses = await args.BackendFqdn.Select(fqdn => new ApplicationGatewayBackendAddressArgs
+                    {
+                        Fqdn = fqdn
+                    }).ToListAsync()
+                }
+            ];
+
+            gatewayIpConfigurations =
+            [
+                new ApplicationGatewayIPConfigurationArgs
+                {
+                    Name =  defaultGatewayIpConfig,
                     Subnet = new SubResourceArgs
                     {
-                        Id =  config.Item2,
+                        Id =  args.SubnetId!,
                     }
-                }).ToList();
-        }
-        
-        List<ApplicationGatewayBackendAddressPoolArgs> backendAddressPools = [];
-        if (args.BackendAddressPools.Count > 0)
-        {
-            backendAddressPools = args.BackendAddressPools.Select(config => new ApplicationGatewayBackendAddressPoolArgs
-            {
-                Name =   config.Item1,
-                BackendAddresses = config.Item2.Select(fqdn => new ApplicationGatewayBackendAddressArgs
-                {
-                    Fqdn = fqdn
-                }).ToList()
-            }).ToList();
-        }
+                }
+            ];
 
-        List<ApplicationGatewayFrontendIPConfigurationArgs> frontendIpConfigurations = [];
-        if (args.FrontendIPConfigurations.Count > 0)
-        {
-            frontendIpConfigurations = args.FrontendIPConfigurations.Select(config =>
+            frontendIpConfigurations = 
+            [
                 new ApplicationGatewayFrontendIPConfigurationArgs
                 {
-                    Name =  config.Item1,
+                    Name =  defaultFrontendIpConfig,
                     PublicIPAddress = new SubResourceArgs
                     {
-                        Id = config.Item2,
+                        Id = args.PublicIpAddressId!,
                     }
+                }
+            ];
+
+            frontendPorts = 
+            [
+                new ApplicationGatewayFrontendPortArgs
+                {
+                    Name =  defaultFrontendPorts,
+                    Port =  args.Port,
+                }
+            ];
+
+            httpListeners = 
+            [
+                new ApplicationGatewayHttpListenerArgs
+                {
+                    Name = defaultHttpListener,
+                    FrontendIPConfiguration = new SubResourceArgs
+                    {
+                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/frontendIPConfigurations/{defaultFrontendIpConfig}")
+                    },
+                    FrontendPort = new SubResourceArgs
+                    {
+                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/frontendPorts/{defaultFrontendPorts}"),
+                    },
+                    Protocol = args.Protocol
+                }    
+            ];
+
+            backendHttpSettingsCollection = 
+            [
+                new ApplicationGatewayBackendHttpSettingsArgs
+                {
+                    Name = defaultBackendHttpSettings,
+                    Port = args.BackendPort,
+                    Path = args.Path,
+                    Protocol = args.BackendProtocol,
+                    PickHostNameFromBackendAddress = true,
+                    CookieBasedAffinity = "Disabled",
+                    RequestTimeout = args.RequestTimeout
+                }
+            ];
+            
+            requestRoutingRules = 
+            [
+                new ApplicationGatewayRequestRoutingRuleArgs
+                {
+                    Name = defaultRoutingRules,
+                    BackendAddressPool = new SubResourceArgs
+                    {
+                        Id  =  Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/backendAddressPools/{defaultBackendPool}"),
+                    },
+                    HttpListener =  new SubResourceArgs
+                    {
+                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/httpListeners/{defaultHttpListener}"),
+                    },
+                    BackendHttpSettings =  new SubResourceArgs
+                    {
+                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/backendHttpSettingsCollection/{defaultBackendHttpSettings}"),
+                    },
+                    RuleType =  args.RoutingRule,
+                    Priority = 9
+                }
+            ];
+        }
+        if (
+            await args.GatewayIpConfigurations.CountAsync() > 0 &&
+            await args.BackendAddressPools.CountAsync() > 0
+            )
+        {
+            if (args.FrontendIPConfigurations.Count == 0) throw new ArgumentNullException($"{nameof(args.FrontendIPConfigurations)}");
+            if (args.FrontendPorts.Count == 0) throw new ArgumentNullException($"{nameof(args.FrontendPorts)}");
+            if (args.HttpListeners.Count == 0) throw new ArgumentNullException($"{nameof(args.HttpListeners)}");
+            if (args.BackendHttpSettingsCollection.Count == 0) throw new ArgumentNullException($"{nameof(args.BackendHttpSettingsCollection)}");
+            if (args.RequestRoutingRules.Count == 0) throw new ArgumentNullException($"{nameof(args.RequestRoutingRules)}");
+            
+            gatewayIpConfigurations = await args.GatewayIpConfigurations
+                .Select(config => new ApplicationGatewayIPConfigurationArgs
+                {
+                    Name =  config.Apply(items => items.Item1),
+                    Subnet = new SubResourceArgs
+                    {
+                        Id =  config.Apply(items => items.Item2)
+                    }
+                }).ToListAsync();
+            
+            backendAddressPools = await args.BackendAddressPools
+                .Select(config => new ApplicationGatewayBackendAddressPoolArgs
+                {
+                    Name =   config.Apply(items => items.Item1),
+                    BackendAddresses = config.Apply(items => items.Item2
+                        .Select(fqdn => new ApplicationGatewayBackendAddressArgs
+                        {
+                            Fqdn = fqdn
+                        }).ToList())
+                }).ToListAsync();
+            
+            frontendIpConfigurations = args.FrontendIPConfigurations
+                .Select(config =>
+                    new ApplicationGatewayFrontendIPConfigurationArgs
+                    {
+                        Name =  config.Item1,
+                        PublicIPAddress = new SubResourceArgs
+                        {
+                            Id = config.Item2,
+                        }
+                    }).ToList();
+            
+            frontendPorts = args.FrontendPorts
+                .Select(config => new ApplicationGatewayFrontendPortArgs
+                {
+                    Name =  config.Item1,
+                    Port =  config.Item2,
                 }).ToList();
-        }
-        
-        List<ApplicationGatewayFrontendPortArgs> frontendPorts = [];
-        if (args.FrontendPorts.Count > 0)
-        {
-            frontendPorts = args.FrontendPorts.Select(config => new ApplicationGatewayFrontendPortArgs
-            {
-                Name =  config.Item1,
-                Port =  config.Item2,
-            }).ToList();
-        }
-        
-        List<ApplicationGatewayHttpListenerArgs> httpListeners = [];
-        if (args.HttpListeners.Count > 0)
-        {
-            httpListeners = args.HttpListeners.Select(config => new ApplicationGatewayHttpListenerArgs
-            {
-                Name = config.Item1,
-                FrontendIPConfiguration = new SubResourceArgs
+            
+            httpListeners = args.HttpListeners
+                .Select(config => new ApplicationGatewayHttpListenerArgs
                 {
-                    Id = config.Item2
-                },
-                FrontendPort = new SubResourceArgs
-                {
-                    Id = config.Item3
-                },
-                Protocol = config.Item4
-            }).ToList();
-        }
-        
-        List<ApplicationGatewayBackendHttpSettingsArgs> backendHttpSettingsCollection = [];
-        if (args.BackendHttpSettingsCollection.Count > 0)
-        {
+                    Name = config.Item1,
+                    FrontendIPConfiguration = new SubResourceArgs
+                    {
+                        Id = config.Item2
+                    },
+                    FrontendPort = new SubResourceArgs
+                    {
+                        Id = config.Item3
+                    },
+                    Protocol = config.Item4
+                }).ToList();
+            
             backendHttpSettingsCollection = args.BackendHttpSettingsCollection
                 .Select(config => new ApplicationGatewayBackendHttpSettingsArgs
                 {
                     Name = config.Item1,
                     Port = config.Item2,
                     Path = config.Item3,
+                    Protocol = args.Protocol,
                     PickHostNameFromBackendAddress = config.Item4,
                     RequestTimeout = config.Item5
                 }).ToList();
+            
+            requestRoutingRules = args.RequestRoutingRules
+                .Select(config => new ApplicationGatewayRequestRoutingRuleArgs
+                {
+                    Name = config.Item1,
+                    BackendAddressPool = new SubResourceArgs
+                    {
+                        Id  =  config.Item2,
+                    },
+                    HttpListener =  new SubResourceArgs
+                    {
+                        Id = config.Item3,
+                    },
+                    BackendHttpSettings =  new SubResourceArgs
+                    {
+                        Id = config.Item4,
+                    },
+                    RuleType =  config.Item5,
+                    Priority = config.Item6
+                }).ToList();
         }
         
-        List<ApplicationGatewayRequestRoutingRuleArgs> requestRoutingRules = [];
-        if (args.RequestRoutingRules.Count > 0)
-        {
-            requestRoutingRules = args.RequestRoutingRules.Select(config => new ApplicationGatewayRequestRoutingRuleArgs
-            {
-                Name = config.Item1,
-                BackendAddressPool = new SubResourceArgs
-                {
-                    Id  =  config.Item2,
-                },
-                HttpListener =  new SubResourceArgs
-                {
-                    Id = config.Item3,
-                },
-                BackendHttpSettings =  new SubResourceArgs
-                {
-                    Id = config.Item4,
-                },
-                RuleType =  config.Item5,
-                Priority = config.Item6
-            }).ToList();
-        }
-        
-        return new ApplicationGateway("OneBank_ApplicationGateway_", new ApplicationGatewayArgs
+        return new ApplicationGateway($"OneBank_ApplicationGateway", new ApplicationGatewayArgs
         {
             ApplicationGatewayName =  args.Name,
             ResourceGroupName = args.ResourceGroupName,

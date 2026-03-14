@@ -5,6 +5,7 @@ namespace defaultapp.Factories;
 
 public abstract class CreateResourceArgs
 {
+    public Input<string>? SubscriptionId { get; init; }
     public required Input<string> Name { get; init; }
     public required Input<string> ResourceGroupName { get; init; }
     public Input<string>? Location { get; init; }

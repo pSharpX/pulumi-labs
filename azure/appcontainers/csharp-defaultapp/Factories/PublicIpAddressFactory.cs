@@ -9,7 +9,7 @@ public static class PublicIpAddressFactory
 {
     public static PublicIPAddress Create(CreatePublicIpAddressArgs args)
     {
-        return new PublicIPAddress($"OneBank_PublicIPAddress_{args.DnsNameLabel}", new PublicIPAddressArgs
+        return new PublicIPAddress($"OneBank_PublicIPAddress_{args.Alias}", new PublicIPAddressArgs
         {
             ResourceGroupName =  args.ResourceGroupName,
             Location =  args.Location,
