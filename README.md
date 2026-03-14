@@ -58,6 +58,8 @@ The name of the stack to operate on. Defaults to the current stack
 ```bash
 pulumi up -s <stack_name>
 ```
+## Debugging and Logging 
+pulumi up --logtostderr -v=9 2> diag.log
 
 ## Configuations 
 Run the following command to get the values for the current stack’s configuration:
