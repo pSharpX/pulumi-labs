@@ -15,7 +15,7 @@ public class OneBankComponentStack: Stack
 
     public OneBankComponentStack()
     {
-        var config = new Config();
+        var config = new Config("csharp-defaultapp");
         var location = config.Get("location");
         var environment = config.Require("environment");
         var tags = config.RequireObject<Dictionary<string, string>>("tags");
@@ -25,8 +25,7 @@ public class OneBankComponentStack: Stack
         var imageName = config.Require("imageName");
         var port = config.RequireInt32("port");
         var isPrivate = config.RequireBoolean("private");
-        var addressPrefixes = config.GetObject<List<string>>("addressPrefixes");
-        var subnetAddressPrefixes = config.GetObject<List<string>>("subnetAddressPrefixes");
+        var vnetConfig = config.RequireObject<VirtualNetworkConfig>("vnetConfig");
         var isExternal = config.RequireBoolean("external");
         var totalCpu = config.RequireDouble("totalCpu");
         var totalMemory = config.Require("totalMemory");
@@ -71,8 +70,7 @@ public class OneBankComponentStack: Stack
             Location = location!,
             Environment = environment,
             Private = isPrivate,
-            AddressPrefixes = addressPrefixes!,
-            SubnetAddressPrefixes = subnetAddressPrefixes!,
+            VirtualNetworkConfig = vnetConfig,
             Image = imageName,
             ParentName = applicationId,
             Name = applicationName,

@@ -87,11 +87,21 @@ public static class OneBankHelper
         });
     }
     
-    public static Output<GetVirtualNetworkResult> GetVNet(Input<string> resourceGroupName, Input<string> virtualNetworkName)
+    public static Output<GetVirtualNetworkResult> GetVirtualNetwork(Input<string> resourceGroupName, Input<string> virtualNetworkName)
     {
-        return GetVirtualNetwork.Invoke(new GetVirtualNetworkInvokeArgs
+        return Pulumi.AzureNative.Network.GetVirtualNetwork.Invoke(new GetVirtualNetworkInvokeArgs
         {
             ResourceGroupName = resourceGroupName, 
+            VirtualNetworkName = virtualNetworkName
+        });
+    }
+
+    public static Output<GetSubnetResult> GetSubnet(Input<string> resourceGroupName, Input<string> virtualNetworkName, Input<string> subnetName)
+    {
+        return Pulumi.AzureNative.Network.GetSubnet.Invoke(new GetSubnetInvokeArgs
+        {
+            ResourceGroupName = resourceGroupName,
+            SubnetName = subnetName,
             VirtualNetworkName = virtualNetworkName
         });
     }

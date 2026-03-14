@@ -21,11 +21,59 @@ config:
   csharp-defaultapp:enableScaling: "false"
   csharp-defaultapp:minInstances: 1
   csharp-defaultapp:maxInstances: 1
-  csharp-defaultapp:addressPrefixes:
-    - "10.1.0.0/16"
-  csharp-defaultapp:subnetAddressPrefixes:
-    - "10.1.0.0/24"
+  csharp-defaultapp:vnetConfig:
+    name: ""
+    subnetId: ""
+    addressPrefixes:
+      - "10.1.0.0/16"
+    subnets:
+      - name: "private-a"
+        alias: "cluster"
+        addressPrefixes: 
+          - "10.0.1.0/24"
+          - "10.0.2.0/24"
+          - "10.0.3.0/24"
+          - "10.0.4.0/24"
+        delegations:
+          - name: "app-environment"
+            serviceName: "Microsoft.App/environments"
+      - name: "private-b"
+        alias: "database"
+        addressPrefixes:
+          - "10.0.5.0/24"
+        delegations:
+          - name: "sql-managed-instances"
+            serviceName: "Microsoft.Sql/managedInstances"
+      - name: "private-c"
+        alias: "storage"
+        addressPrefixes:
+          - "10.0.6.0/24"
+      - name: "public-a"
+        alias: "gateway"
+        addressPrefixes:
+          - "10.0.10.0/24"
+          - "10.0.11.0/24"
   csharp-defaultapp:secrets:
     - ["name1", "alias1", "value1"]
-    - ["name1", "alias2", "value2"]
+    - ["name2", "alias2", "value2"]
+  csharp-defaultapp:appConfig:
+    - [ "name1", "alias1", "value1" ]
+    - [ "name2", "alias2", "value2" ]
   csharp-defaultapp:enableProbes: "true"
+  csharp-defaultapp:enableStorage: true
+  csharp-defaultapp:storageAccountName:
+  csharp-defaultapp:enableVault: true
+  csharp-defaultapp:vaultName:
+  csharp-defaultapp:enableConfigStore: true
+  csharp-defaultapp:configStoreName:  
+  csharp-defaultapp:enableRegistry: true
+  csharp-defaultapp:registryName:
+  csharp-defaultapp:enableEncryption: true
+  csharp-defaultapp:encryptionKeyName:
+  csharp-defaultapp:enableDatabase: true
+  csharp-defaultapp:databaseUsername: true
+  csharp-defaultapp:databasePassword: true
+  csharp-defaultapp:databaseName: true
+    
+
+

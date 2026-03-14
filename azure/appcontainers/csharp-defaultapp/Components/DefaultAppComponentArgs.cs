@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 using Pulumi;
 
 namespace defaultapp.components;
@@ -17,9 +18,7 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public Input<bool> EnableScaling { get; init; } = false;
     public Input<int> MinInstances { get; init; } = 1;   
     public Input<int> MaxInstances { get; init; } = 1;
-    public string? SubnetId { get; set; }
-    public InputList<string>? AddressPrefixes { get; init; }
-    public InputList<string>? SubnetAddressPrefixes { get; init; }
+    public VirtualNetworkConfig? VirtualNetworkConfig { get; init; }
     public ImmutableList<(string, string, string)> Secrets { get; init; } = ImmutableList.Create< (string, string, string)>();
     public ImmutableList<(string, string, string)> AppConfig { get; init; } = ImmutableList.Create< (string, string, string)>();
     public List<string> AllowedOrigins { get; init; } = ["*"];
@@ -32,4 +31,37 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public Input<string>? Username { get; init; }
     public Input<string>? Password { get; init; }
     public string? Database { get; init; }
+}
+
+public class VirtualNetworkConfig
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+    [JsonPropertyName("subnetId")]
+    public string SubnetId { get; set; } = "";
+    [JsonPropertyName("addressPrefixes")]
+    public List<string> AddressPrefixes { get; set; } = new();
+    
+    [JsonPropertyName("subnets")]
+    public List<SubnetConfig> Subnets { get; set; } = new();
+}
+
+public class SubnetConfig
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+    [JsonPropertyName("alias")]
+    public string Alias { get; set; } = "";
+    [JsonPropertyName("addressPrefixes")]
+    public List<string>? AddressPrefixes { get; set; } = new();
+    [JsonPropertyName("delegations")]
+    public List<NetworkDelegationConfig> Delegations { get; set; } = new();
+}
+
+public class NetworkDelegationConfig
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+    [JsonPropertyName("serviceName")]
+    public string ServiceName { get; set; } = "";
 }

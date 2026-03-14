@@ -29,6 +29,10 @@ public class DefaultAppComponent: ComponentResource
     private readonly ManagedEnvironment _managedEnvironment;
     
     private VirtualNetwork? _virtualNetwork;
+    private Output<GetVirtualNetworkResult>? _existentVirtualNetwork;
+    private List<Subnet>? _subnets;
+    private Output<GetSubnetResult>? _existentSubnet;
+    private Output<string>? _subnetId;
     
     private Vault? _vault;
     private Output<GetVaultResult>? _existentVault;
@@ -58,6 +62,7 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags
         });
         
+        InitializeVirtualNetwork(args);
         InitializeVault(args);
         InitializeConfigStore(args);
         InitializeStorageAccount(args);
@@ -75,19 +80,6 @@ public class DefaultAppComponent: ComponentResource
             RetentionInDays = 30,
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });
-
-        _virtualNetwork = args is { Private: true, SubnetId: null } ? VirtualNetworkFactory.Create(new CreateVirtualNetworkArgs
-            {
-                Name = Output.Format($"{args.ParentName}-vnet-{args.Environment}"), 
-                ResourceGroupName = args.ResourceGroupName, 
-                Location = args.Location!,
-                AddressPrefixes = args.AddressPrefixes!,
-                SubnetAddressPrefixes = args.SubnetAddressPrefixes!,
-                Tags = args.Tags,
-                Parent = this
-            })
-            : null;
-        var subnetId = _virtualNetwork?.Subnets.Apply(subnets => subnets[0].Id);
         
         _managedEnvironment = new ManagedEnvironment("OneBank_ManagedEnvironment", new ManagedEnvironmentArgs
         {
@@ -108,7 +100,7 @@ public class DefaultAppComponent: ComponentResource
                 new VnetConfigurationArgs
                 {
                     Internal = args.Private,
-                    InfrastructureSubnetId =  args.SubnetId is not null ? args.SubnetId:  subnetId!
+                    InfrastructureSubnetId = _subnetId!
                 } : new VnetConfigurationArgs
                 {
                     Internal = args.Private,
@@ -404,5 +396,44 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags,
         });
+    }
+
+    private void InitializeVirtualNetwork(DefaultAppComponentArgs args)
+    {
+        if (!args.Private || args.VirtualNetworkConfig is null) return;
+
+        if (!string.IsNullOrEmpty(args.VirtualNetworkConfig.Name) &&  !string.IsNullOrEmpty(args.VirtualNetworkConfig.SubnetId) )
+        {
+            _existentVirtualNetwork = OneBankHelper.GetVirtualNetwork(args.ResourceGroupName, args.VirtualNetworkConfig?.Name!);
+            _existentSubnet = OneBankHelper.GetSubnet(args.ResourceGroupName, args.VirtualNetworkConfig?.Name!, args.VirtualNetworkConfig?.SubnetId!);
+            _subnetId = _existentSubnet.Apply(subnet => subnet.Id)!;
+            return;    
+        }
+
+        _virtualNetwork = VirtualNetworkFactory.Create(new CreateVirtualNetworkArgs
+        {
+            Name = Output.Format($"{args.ParentName}-vnet-{args.Environment}"),
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location!,
+            AddressPrefixes = args.VirtualNetworkConfig.AddressPrefixes!,
+            Tags = args.Tags,
+            Parent = this
+        });
+
+        _subnets = args.VirtualNetworkConfig.Subnets?.Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
+        {
+            Alias = subnet.Alias!,
+            VirtualNetworkName = _virtualNetwork.Name,
+            Name = Output.Format($"{args.ParentName}-{subnet.Name}-subnet"),
+            SubnetName = subnet.Name!,
+            SubnetAddressPrefixes= subnet.AddressPrefixes!,
+            ResourceGroupName = args.ResourceGroupName,
+            Delegations = subnet.Delegations?.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList()!,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags
+        })).ToList();
+        
+        _subnetId = _subnets?[0].Id!;
     }
 }
