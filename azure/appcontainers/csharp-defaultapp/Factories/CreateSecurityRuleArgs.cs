@@ -19,6 +19,6 @@ public class CreateSecurityRuleArgs: CreateResourceArgs
     public string? SourceAddressPrefix { get; init; }
     public List<string>? SourceAddressPrefixes { get; init; }
     public List<string>? SourceApplicationSecurityGroups { get; init; } = null;
-    public string? SourcePortRange { get; init; }
+    public string SourcePortRange { get; init; } = "*";
     public List<string>? SourcePortRanges { get; init; }
 }
