@@ -11,4 +11,5 @@ public class CreateSubnetArgs: CreateResourceArgs
     public Input<string>? SubnetAddressPrefix { get; init; }
     public InputList<string>? SubnetAddressPrefixes { get; init; }
     public List<(string, string)>? Delegations { get; init; }
+    public Input<string>? NetworkSecurityGroupId { get; init; }
 }

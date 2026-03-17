@@ -2,6 +2,7 @@ using System.Linq;
 using Pulumi;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.Network.Inputs;
+using NetworkSecurityGroupArgs = Pulumi.AzureNative.Network.Inputs.NetworkSecurityGroupArgs;
 using SubnetArgs = Pulumi.AzureNative.Network.SubnetArgs;
 
 namespace defaultapp.Factories;
@@ -19,6 +20,16 @@ public static class SubnetFactory
                 ServiceName = delegation.Item2
             }).ToList();
         }
+
+        NetworkSecurityGroupArgs? networkSecurityGroup = null;
+        if (args.NetworkSecurityGroupId is null)
+        {
+            networkSecurityGroup = new NetworkSecurityGroupArgs
+            {
+                Id = args.NetworkSecurityGroupId,
+            };
+        }
+        
         return new Subnet($"OneBank_SubNet_{args.Alias}", new SubnetArgs
         {
             Name =  args.Name,
@@ -27,6 +38,7 @@ public static class SubnetFactory
             AddressPrefix = args.SubnetAddressPrefix,
             AddressPrefixes = args.SubnetAddressPrefixes!,
             ResourceGroupName = args.ResourceGroupName,
+            NetworkSecurityGroup =  networkSecurityGroup!,
             Delegations = delegations 
         }, new CustomResourceOptions { Parent = args.Parent });
     }

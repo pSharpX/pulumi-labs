@@ -31,9 +31,11 @@ public class DefaultAppComponent: ComponentResource
 
     private PublicIPAddress? _publicIpAddress;
     private ApplicationGateway? _applicationGateway;
+    private NetworkSecurityGroup? _networkSecurityGroup;
     private VirtualNetwork? _virtualNetwork;
     private Output<GetVirtualNetworkResult>? _existentVirtualNetwork;
-    private List<Subnet>? _subnets;
+    private List<Subnet>? _publicSubnets;
+    private List<Subnet>? _privateSubnets;
     private Output<GetSubnetResult>? _existentSubnet;
     private Output<string>? _defaultPrivateSubnetId;
     private Output<string>? _defaultPublicSubnetId;
@@ -66,6 +68,7 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags
         });
         
+        InitializeSecurityGroups(args);
         InitializeVirtualNetwork(args);
         InitializeVault(args);
         InitializeConfigStore(args);
@@ -333,7 +336,7 @@ public class DefaultAppComponent: ComponentResource
 
         _configurationStore = ConfigurationStoreFactory.Create(new CreateConfigurationStoreArgs
         {
-            Name = Output.Format($"{args.ParentName}-configStore-{args.Environment}"),
+            Name = Output.Format($"{args.ParentName}-config-store-{args.Environment}"),
             Location = args.Location,
             ResourceGroupName = args.ResourceGroupName,
             DisableLocalAuth = false,
@@ -439,7 +442,8 @@ public class DefaultAppComponent: ComponentResource
     {
         if (!args.Private || args.VirtualNetworkConfig is null) return;
 
-        if (!string.IsNullOrEmpty(args.VirtualNetworkConfig.Name) &&  !string.IsNullOrEmpty(args.VirtualNetworkConfig.SubnetId) )
+        if (!string.IsNullOrEmpty(args.VirtualNetworkConfig.Name) &&  
+            !string.IsNullOrEmpty(args.VirtualNetworkConfig.SubnetId) )
         {
             _existentVirtualNetwork = OneBankHelper.GetVirtualNetwork(args.ResourceGroupName, args.VirtualNetworkConfig?.Name!);
             _existentSubnet = OneBankHelper.GetSubnet(args.ResourceGroupName, args.VirtualNetworkConfig?.Name!, args.VirtualNetworkConfig?.SubnetId!);
@@ -456,22 +460,108 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags,
             Parent = this
         });
+        
+        Subnet gatewayIngressSubnet = args.VirtualNetworkConfig.Subnets
+            .Where(subnet => !subnet.Tags.Contains("private") && subnet.Alias.Equals("gateway-ingress"))
+            .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
+            {
+                Alias = subnet.Alias,
+                VirtualNetworkName = _virtualNetwork.Name,
+                Name = Output.Format($"{args.ParentName}-{subnet.Name}-subnet"),
+                SubnetName = subnet.Name,
+                SubnetAddressPrefixes= subnet.AddressPrefixes!,
+                ResourceGroupName = args.ResourceGroupName,
+                Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
+                Location = args.Location,
+                Parent = this,
+                Tags = args.Tags
+            })).Single();
+        
+        Subnet clusterSubnet = args.VirtualNetworkConfig.Subnets
+            .Where(subnet => subnet.Tags.Contains("private") && subnet.Alias.Equals("cluster"))
+            .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
+            {
+                Alias = subnet.Alias,
+                VirtualNetworkName = _virtualNetwork.Name,
+                Name = Output.Format($"{args.ParentName}-{subnet.Name}-subnet"),
+                SubnetName = subnet.Name,
+                SubnetAddressPrefixes= subnet.AddressPrefixes!,
+                ResourceGroupName = args.ResourceGroupName,
+                Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
+                NetworkSecurityGroupId = _networkSecurityGroup?.Id!,
+                Location = args.Location,
+                Parent = this,
+                Tags = args.Tags
+            })).Single();
 
-        _subnets = args.VirtualNetworkConfig.Subnets?.Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
+        _publicSubnets = args.VirtualNetworkConfig.Subnets
+            .Where(subnet => !subnet.Tags.Contains("private") && !subnet.Alias.Equals("gateway-ingress"))
+            .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
         {
-            Alias = subnet.Alias!,
+            Alias = subnet.Alias,
             VirtualNetworkName = _virtualNetwork.Name,
             Name = Output.Format($"{args.ParentName}-{subnet.Name}-subnet"),
-            SubnetName = subnet.Name!,
+            SubnetName = subnet.Name,
             SubnetAddressPrefixes= subnet.AddressPrefixes!,
             ResourceGroupName = args.ResourceGroupName,
-            Delegations = subnet.Delegations?.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList()!,
+            Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
             Location = args.Location,
             Parent = this,
             Tags = args.Tags
         })).ToList();
         
-        _defaultPrivateSubnetId = _subnets?[0].Id!;
-        _defaultPublicSubnetId = _subnets?[3].Id!;
+        _privateSubnets = args.VirtualNetworkConfig.Subnets
+            .Where(subnet => subnet.Tags.Contains("private") && !subnet.Alias.Equals("cluster"))
+            .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
+            {
+                Alias = subnet.Alias,
+                VirtualNetworkName = _virtualNetwork.Name,
+                Name = Output.Format($"{args.ParentName}-{subnet.Name}-subnet"),
+                SubnetName = subnet.Name,
+                SubnetAddressPrefixes= subnet.AddressPrefixes!,
+                ResourceGroupName = args.ResourceGroupName,
+                Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
+                Location = args.Location,
+                Parent = this,
+                Tags = args.Tags
+            })).ToList();
+        
+        _defaultPrivateSubnetId = clusterSubnet.Id;
+        _defaultPublicSubnetId = gatewayIngressSubnet.Id;
+    }
+
+    private void InitializeSecurityGroups(DefaultAppComponentArgs args)
+    {
+        if (!args.Private || args.VirtualNetworkConfig is null) return;
+
+        if (!string.IsNullOrEmpty(args.VirtualNetworkConfig.Name) &&
+            !string.IsNullOrEmpty(args.VirtualNetworkConfig.SubnetId)) return;
+        
+        _networkSecurityGroup = NetworkSecurityGroupFactory.Create(new CreateNetworkSecurityGroupArgs
+        {
+            Name = Output.Format($"{args.ParentName}-{args.Name}-nsg-{args.Environment}"),
+            ResourceGroupName = args.ResourceGroupName,
+            Alias = "Bookstore",
+            SecurityRules = [
+                new CreateSecurityRuleArgs
+                {
+                    ResourceGroupName = args.ResourceGroupName,
+                    Name = "allow-agw-traffic",
+                    Alias = "allow-agw-traffic",
+                    Description = "allow http inbound traffic from gateway-ingress subnet to private subnet",
+                    Access = "Allow",
+                    Direction = "Inbound",
+                    DestinationAddressPrefixes = [ "10.1.10.0/24" , "10.1.11.0/24"],
+                    DestinationPortRange = "80",
+                    Priority = 99,
+                    Protocol = "Tcp",
+                    SourceAddressPrefixes = ["10.1.1.0/24"],
+                    SourcePortRange = "443",
+                }
+            ],
+            Location = args.Location,
+            Tags = args.Tags,
+            Parent = this
+        });
     }
 }

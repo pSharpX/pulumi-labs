@@ -85,11 +85,11 @@ public static class ApplicationGatewayFactory
                     Name = defaultHttpListener,
                     FrontendIPConfiguration = new SubResourceArgs
                     {
-                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/frontendIPConfigurations/{defaultFrontendIpConfig}")
+                        Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "frontendIPConfigurations", defaultFrontendIpConfig)
                     },
                     FrontendPort = new SubResourceArgs
                     {
-                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/frontendPorts/{defaultFrontendPorts}"),
+                        Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "frontendPorts", defaultFrontendPorts)
                     },
                     Protocol = args.Protocol
                 }    
@@ -116,15 +116,15 @@ public static class ApplicationGatewayFactory
                     Name = defaultRoutingRules,
                     BackendAddressPool = new SubResourceArgs
                     {
-                        Id  =  Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/backendAddressPools/{defaultBackendPool}"),
+                        Id  =  BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "backendAddressPools", defaultBackendPool)
                     },
                     HttpListener =  new SubResourceArgs
                     {
-                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/httpListeners/{defaultHttpListener}"),
+                        Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "httpListeners", defaultHttpListener)
                     },
                     BackendHttpSettings =  new SubResourceArgs
                     {
-                        Id = Output.Format($"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{args.Name}/backendHttpSettingsCollection/{defaultBackendHttpSettings}"),
+                        Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "backendHttpSettingsCollection", defaultBackendHttpSettings)
                     },
                     RuleType =  args.RoutingRule,
                     Priority = 9
@@ -202,7 +202,7 @@ public static class ApplicationGatewayFactory
                     Name = config.Item1,
                     Port = config.Item2,
                     Path = config.Item3,
-                    Protocol = args.Protocol,
+                    Protocol = args.BackendProtocol,
                     PickHostNameFromBackendAddress = config.Item4,
                     RequestTimeout = config.Item5
                 }).ToList();
@@ -251,4 +251,8 @@ public static class ApplicationGatewayFactory
             Tags = args.Tags!,
         }, new CustomResourceOptions { Parent = args.Parent });
     }
+
+    private static Output<string> BuildResourceId(Input<string> subscriptionId, Input<string> resourceGroupName, Input<string> applicationGateway, string parentName, Input<string> name) =>
+        Output.Format(
+            $"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/applicationGateways/{applicationGateway}/{parentName}/{name}");
 }

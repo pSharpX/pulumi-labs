@@ -56,6 +56,9 @@ public class SubnetConfig
     public List<string>? AddressPrefixes { get; set; } = new();
     [JsonPropertyName("delegations")]
     public List<NetworkDelegationConfig> Delegations { get; set; } = new();
+    [JsonPropertyName("tags")]
+    public List<string> Tags { get; set; } = [];
+    
 }
 
 public class NetworkDelegationConfig
