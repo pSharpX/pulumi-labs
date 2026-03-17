@@ -22,7 +22,7 @@ public static class SubnetFactory
         }
 
         NetworkSecurityGroupArgs? networkSecurityGroup = null;
-        if (args.NetworkSecurityGroupId is null)
+        if (args.NetworkSecurityGroupId is not null)
         {
             networkSecurityGroup = new NetworkSecurityGroupArgs
             {

@@ -553,7 +553,7 @@ public class DefaultAppComponent: ComponentResource
                     Direction = "Inbound",
                     DestinationAddressPrefixes = [ "10.1.10.0/24" , "10.1.11.0/24"],
                     DestinationPortRange = "80",
-                    Priority = 99,
+                    Priority = 100,
                     Protocol = "Tcp",
                     SourceAddressPrefixes = ["10.1.1.0/24"],
                     SourcePortRange = "443",
