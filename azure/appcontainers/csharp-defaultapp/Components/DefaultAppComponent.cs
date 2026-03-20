@@ -12,6 +12,7 @@ using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
+using Pulumi.AzureNative.PrivateDns;
 using Pulumi.AzureNative.Sql;
 using Pulumi.AzureNative.Storage;
 using Pulumi.Random;
@@ -30,6 +31,9 @@ public class DefaultAppComponent: ComponentResource
     private readonly ContainerApp _containerApp;
 
     private PublicIPAddress? _publicIpAddress;
+    private PrivateEndpoint? _privateEndpoint;
+    private PrivateLinkService? _privateLinkService;
+    private PrivateZone? _privateZone;
     private ApplicationGateway? _applicationGateway;
     private NetworkSecurityGroup? _networkSecurityGroup;
     private VirtualNetwork? _virtualNetwork;
@@ -38,6 +42,7 @@ public class DefaultAppComponent: ComponentResource
     private List<Subnet>? _privateSubnets;
     private Output<GetSubnetResult>? _existentSubnet;
     private Output<string>? _defaultPrivateSubnetId;
+    private Output<string>? _defaultPrivateEndpointSubnetId;
     private Output<string>? _defaultPublicSubnetId;
     
     private Vault? _vault;
@@ -54,7 +59,7 @@ public class DefaultAppComponent: ComponentResource
     
     private ImmutableList<Secret>? _secrets;
     
-    public Output<string> Endpoint { get; }
+    public Output<string> Endpoint { get; private set; }
 
     public DefaultAppComponent(string name, DefaultAppComponentArgs args, ComponentResourceOptions? options = null) 
         : base("custom:components:DefaultAppComponent", name, options)
@@ -68,7 +73,7 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags
         });
         
-        InitializeSecurityGroups(args);
+        //InitializeSecurityGroups(args);
         InitializeVirtualNetwork(args);
         InitializeVault(args);
         InitializeConfigStore(args);
@@ -103,6 +108,7 @@ public class DefaultAppComponent: ComponentResource
                         .Apply(key => key.PrimarySharedKey!)
                 },
             },
+            PublicNetworkAccess = args.Private ? "Disabled": "Enabled",
             VnetConfiguration = args.Private ? 
                 new VnetConfigurationArgs
                 {
@@ -242,44 +248,14 @@ public class DefaultAppComponent: ComponentResource
             },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });
-
+        
         Endpoint = _containerApp.Configuration.Apply(configuration => configuration?.Ingress?.Fqdn!);
 
-        if (args.Private)
-        {
-            _publicIpAddress = PublicIpAddressFactory.Create(new CreatePublicIpAddressArgs
-            {
-                Name = Output.Format($"{args.ParentName}-public-ip-{args.Environment}"),
-                Alias = "bookstore",
-                DnsNameLabel = args.ParentName,
-                SkuName = "Standard",
-                IpAllocationMethod = "Static",
-                ResourceGroupName = args.ResourceGroupName,
-                Location = args.Location,
-                Parent =  this,
-                Tags = args.Tags,
-            });
-            
-            _applicationGateway = ApplicationGatewayFactory.Create(new CreateApplicationGatewayArgs
-            {
-                Name = Output.Format($"{args.ParentName}-alb-{args.Environment}"),
-                ResourceGroupName = args.ResourceGroupName,
-                SubscriptionId = args.SubscriptionId,
-                Location = args.Location,
-                BackendFqdn = [Endpoint],
-                PublicIpAddressId = _publicIpAddress.Id,
-                SubnetId = Output.Tuple(_defaultPublicSubnetId!, _defaultPrivateSubnetId!)
-                    .Apply(items => items.Item1 ?? items.Item2),
-                Parent =  this,
-                Tags = args.Tags,
-            }).Result;
-
-            Endpoint = _publicIpAddress.DnsSettings.Apply(dns => dns?.Fqdn)!;
-        }
+        InitializePrivateConnection(args);
         
         RegisterOutputs(new Dictionary<string, object?>
         {
-            {"Endpoint", Output.Format($"https://{Endpoint}")}
+            {"Endpoint", Endpoint}
         });
     }
 
@@ -477,6 +453,22 @@ public class DefaultAppComponent: ComponentResource
                 Tags = args.Tags
             })).Single();
         
+        Subnet privateEndpointSubnet = args.VirtualNetworkConfig.Subnets
+            .Where(subnet => subnet.Tags.Contains("private") && subnet.Alias.Equals("private-endpoint"))
+            .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
+            {
+                Alias = subnet.Alias,
+                VirtualNetworkName = _virtualNetwork.Name,
+                Name = Output.Format($"{args.ParentName}-{subnet.Name}-subnet"),
+                SubnetName = subnet.Name,
+                SubnetAddressPrefixes= subnet.AddressPrefixes!,
+                ResourceGroupName = args.ResourceGroupName,
+                Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
+                Location = args.Location,
+                Parent = this,
+                Tags = args.Tags
+            })).Single();
+        
         Subnet clusterSubnet = args.VirtualNetworkConfig.Subnets
             .Where(subnet => subnet.Tags.Contains("private") && subnet.Alias.Equals("cluster"))
             .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
@@ -488,7 +480,7 @@ public class DefaultAppComponent: ComponentResource
                 SubnetAddressPrefixes= subnet.AddressPrefixes!,
                 ResourceGroupName = args.ResourceGroupName,
                 Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
-                NetworkSecurityGroupId = _networkSecurityGroup?.Id!,
+                //NetworkSecurityGroupId = _networkSecurityGroup?.Id!,
                 Location = args.Location,
                 Parent = this,
                 Tags = args.Tags
@@ -511,7 +503,7 @@ public class DefaultAppComponent: ComponentResource
         })).ToList();
         
         _privateSubnets = args.VirtualNetworkConfig.Subnets
-            .Where(subnet => subnet.Tags.Contains("private") && !subnet.Alias.Equals("cluster"))
+            .Where(subnet => subnet.Tags.Contains("private") && !subnet.Alias.Equals("cluster") && !subnet.Alias.Equals("private-endpoint"))
             .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
             {
                 Alias = subnet.Alias,
@@ -528,6 +520,7 @@ public class DefaultAppComponent: ComponentResource
         
         _defaultPrivateSubnetId = clusterSubnet.Id;
         _defaultPublicSubnetId = gatewayIngressSubnet.Id;
+        _defaultPrivateEndpointSubnetId = privateEndpointSubnet.Id;
     }
 
     private void InitializeSecurityGroups(DefaultAppComponentArgs args)
@@ -551,17 +544,129 @@ public class DefaultAppComponent: ComponentResource
                     Description = "allow http inbound traffic from gateway-ingress subnet to private subnet",
                     Access = "Allow",
                     Direction = "Inbound",
-                    DestinationAddressPrefixes = [ "10.1.10.0/24" , "10.1.11.0/24"],
-                    DestinationPortRange = "80",
+                    DestinationAddressPrefixes = ["10.1.1.0/24"],
+                    DestinationPortRange = "*",
                     Priority = 100,
                     Protocol = "Tcp",
-                    SourceAddressPrefixes = ["10.1.1.0/24"],
-                    SourcePortRange = "443",
+                    SourceAddressPrefixes = [ "10.1.10.0/24" , "10.1.11.0/24"],
+                    SourcePortRange = "*",
                 }
             ],
             Location = args.Location,
             Tags = args.Tags,
             Parent = this
         });
+    }
+
+    private void InitializePrivateConnection(DefaultAppComponentArgs args)
+    {
+        if (!args.Private || args.VirtualNetworkConfig is null) return;
+
+        var defaultDomain = _managedEnvironment.DefaultDomain;
+        var staticIp = _managedEnvironment.StaticIp;
+        
+        _privateZone = PrivateDnsFactory.Create(new CreateDnsZoneArgs
+        {
+            Alias = "bookstore",
+            Name = defaultDomain,
+            ResourceGroupName = args.ResourceGroupName,
+            Parent = this,
+            Tags = args.Tags,
+        });
+
+        var starRecordSet = PrivateRecordSetFactory.Create(new CreateRecordSetArgs
+        {
+            Alias = "star",
+            Name = "*",
+            RecordType = "A",
+            ZoneName = _privateZone.Name,
+            Ipv4Address = staticIp,
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags,
+        });
+        var atRecordSet = PrivateRecordSetFactory.Create(new CreateRecordSetArgs
+        {
+            Alias = "at",
+            Name = "@",
+            RecordType = "A",
+            ZoneName = _privateZone.Name,
+            Ipv4Address = staticIp,
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags,
+        });
+
+        var virtualNetworkLink = VirtualNetworkLinkFactory.Create(new CreateVirtualNetworkLinkArgs
+        {
+            Alias = "bookstore",
+            Name = Output.Format($"{args.ParentName}-vnet-pdns-link-{args.Environment}"),
+            VirtualNetworkId = _virtualNetwork?.Id!,
+            PrivateZoneName = _privateZone.Name,
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags!,
+        });
+        
+        _privateEndpoint = PrivateEndpointFactory.Create(new CreatePrivateEndpointArgs
+        {
+            Name = Output.Format($"{args.ParentName}-private-endpoint-{args.Environment}"),
+            Alias = "bookstore",
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            SubnetId = _defaultPrivateEndpointSubnetId!,
+            //SubnetId = _defaultPrivateSubnetId!,
+            PrivateLinkServiceId = _managedEnvironment.Id,
+            GroupId = "managedEnvironments",
+            Parent = this,
+            Tags = args.Tags,
+        });
+
+        _publicIpAddress = PublicIpAddressFactory.Create(new CreatePublicIpAddressArgs
+        {
+            Name = Output.Format($"{args.ParentName}-public-ip-{args.Environment}"),
+            Alias = "bookstore",
+            DnsNameLabel = args.ParentName,
+            SkuName = "Standard",
+            IpAllocationMethod = "Static",
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags,
+        });
+        
+        _applicationGateway = ApplicationGatewayFactory.Create(new CreateApplicationGatewayArgs
+        {
+            Name = Output.Format($"{args.ParentName}-alb-{args.Environment}"),
+            SkuName = "Standard_v2",
+            SkuTier = "Standard_v2",
+            ResourceGroupName = args.ResourceGroupName,
+            SubscriptionId = args.SubscriptionId,
+            Location = args.Location,
+            BackendFqdn = [Endpoint],
+            PublicIpAddressId = _publicIpAddress.Id,
+            SubnetId = Output.Tuple(_defaultPublicSubnetId!, _defaultPrivateSubnetId!)
+                .Apply(items => items.Item1 ?? items.Item2),
+            Parent = this,
+            Tags = args.Tags,
+        }).Result;
+
+        _privateLinkService = PrivateLinkServiceFactory.Create(new CreatePrivateLinkServiceArgs
+        {
+            Name = Output.Format($"{args.ParentName}-private-link-service-{args.Environment}"),
+            Alias = "bookstore",
+            SubnetId = _defaultPrivateSubnetId!,
+            FrontendIpConfigurationId = Output.Format(
+                $"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{_applicationGateway.Name}/frontendIPConfigurations/{args.ParentName}-alb-{args.Environment}-frontend-ipconfig"),
+            ResourceGroupName = args.ResourceGroupName,
+            Location = args.Location,
+            Parent = this,
+            Tags = args.Tags,
+        });
+        
+        Endpoint = Output.Format($"http://{_publicIpAddress.DnsSettings.Apply(dns => dns?.Fqdn)}");
     }
 }

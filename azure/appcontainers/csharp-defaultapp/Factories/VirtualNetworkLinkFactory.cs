@@ -17,7 +17,7 @@ public static class VirtualNetworkLinkFactory
               Id  = args.VirtualNetworkId
             },
             ResourceGroupName = args.ResourceGroupName,
-            Location =  args.Location,
+            Location =  "global",
             RegistrationEnabled =  args.RegistrationEnabled,
             Tags =  args.Tags!,
 

@@ -12,7 +12,7 @@ public static class PrivateDnsFactory
         {
             PrivateZoneName = args.Name,
             ResourceGroupName = args.ResourceGroupName,
-            Location = args.Location,
+            Location = "global",
             Tags = args.Tags!,
         }, new CustomResourceOptions { Parent = args.Parent });
     } 

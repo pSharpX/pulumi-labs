@@ -127,7 +127,7 @@ public static class ApplicationGatewayFactory
                         Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "backendHttpSettingsCollection", defaultBackendHttpSettings)
                     },
                     RuleType =  args.RoutingRule,
-                    Priority = 9
+                    Priority = args.Priority
                 }
             ];
         }

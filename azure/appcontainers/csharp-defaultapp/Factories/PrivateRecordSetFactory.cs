@@ -19,7 +19,7 @@ public static class PrivateRecordSetFactory
         };
         if (args.RecordType.Equals("A"))
         {
-            if (string.IsNullOrEmpty(args.Ipv4Address)) throw new ArgumentNullException(nameof(args.Ipv4Address));
+            args.Ipv4Address?.Ensure(ip => !string.IsNullOrEmpty(ip), nameof(args.Ipv4Address));
  
             recordSetArgs.ARecords = 
             [

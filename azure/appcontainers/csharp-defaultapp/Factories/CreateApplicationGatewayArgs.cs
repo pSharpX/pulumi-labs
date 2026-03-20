@@ -27,4 +27,5 @@ public class CreateApplicationGatewayArgs: CreateResourceArgs
     public string Protocol { get; init; } = "Http"; // Http, Https, Tcp, Tls
     public string BackendProtocol { get; init; } = "Https";
     public string RoutingRule { get; init; } = "Basic"; // Basic, PathBasedRouting
+    public int Priority { get; init; } = 1;
 }
