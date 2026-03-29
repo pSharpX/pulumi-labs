@@ -105,8 +105,9 @@ public static class ApplicationGatewayFactory
                     Name = defaultBackendHttpSettings,
                     Port = args.BackendPort,
                     Path = args.Path,
+                    HostName = args.BackendHostname,
                     Protocol = args.BackendProtocol,
-                    PickHostNameFromBackendAddress = true,
+                    PickHostNameFromBackendAddress = args.PickHostNameFromBackendAddress,
                     CookieBasedAffinity = "Disabled",
                     RequestTimeout = args.RequestTimeout,
                     Probe = new SubResourceArgs

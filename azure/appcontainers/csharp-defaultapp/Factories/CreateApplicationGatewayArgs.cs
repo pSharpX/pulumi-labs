@@ -23,7 +23,9 @@ public class CreateApplicationGatewayArgs: CreateResourceArgs
     public Input<string>? SubnetId { get; init; }
     public int Port { get; init; } = 80;
     public int BackendPort { get; init; } = 80;
-    public InputList<string>BackendFqdn { get; init; } = [];
+    public InputList<string>BackendFqdn { get; set; } = [];
+    public Input<string>? BackendHostname { get; set; }
+    public bool PickHostNameFromBackendAddress { get; set; } = true;
     public Input<string>? PublicIpAddressId { get; init; }
     public int RequestTimeout { get; init; } = 60;
     public string Path { get; init; } = "/";
