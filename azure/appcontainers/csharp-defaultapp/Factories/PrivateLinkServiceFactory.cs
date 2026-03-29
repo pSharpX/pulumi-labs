@@ -19,7 +19,7 @@ public static class PrivateLinkServiceFactory
                 new PrivateLinkServiceIpConfigurationArgs
                 {
                     Name = Output.Format($"{args.Name}-ipconfig"),
-                    PrivateIPAddress = args.PrivateIpAddress!,
+                    //PrivateIPAddress = args.PrivateIpAddress!,
                     PrivateIPAllocationMethod = args.PrivateIpAllocationMethod,
                     PrivateIPAddressVersion =  args.PrivateIpAddressVersion,
                     Primary = true,
