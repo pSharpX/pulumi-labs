@@ -10,6 +10,9 @@ public class CreateApplicationGatewayArgs: CreateResourceArgs
     public int SkuCapacity { get; init; } = 1;
     public string SkuFamily { get; init; } = "Generation_2"; // Generation_1, Generation_2
     public bool EnableHttp2 { get; init; } = false;
+    public bool EnableAutoScale { get; init; } = false;
+    public int MinCapacity { get; init; } = 1;
+    public int MaxCapacity { get; init; } = 2;
     public InputList<(string, string)> GatewayIpConfigurations { get; init; } = [];
     public List<(string, int)> FrontendPorts { get; init; } = [];
     public List<(string, string)> FrontendIPConfigurations { get; init; } = [];
@@ -19,13 +22,13 @@ public class CreateApplicationGatewayArgs: CreateResourceArgs
     public List<(string, string, string, string, string, int)> RequestRoutingRules { get; init; } = [];
     public Input<string>? SubnetId { get; init; }
     public int Port { get; init; } = 80;
-    public int BackendPort { get; init; } = 443;
+    public int BackendPort { get; init; } = 80;
     public InputList<string>BackendFqdn { get; init; } = [];
     public Input<string>? PublicIpAddressId { get; init; }
     public int RequestTimeout { get; init; } = 60;
     public string Path { get; init; } = "/";
     public string Protocol { get; init; } = "Http"; // Http, Https, Tcp, Tls
-    public string BackendProtocol { get; init; } = "Https";
+    public string BackendProtocol { get; init; } = "Http";
     public string RoutingRule { get; init; } = "Basic"; // Basic, PathBasedRouting
     public int Priority { get; init; } = 1;
 }

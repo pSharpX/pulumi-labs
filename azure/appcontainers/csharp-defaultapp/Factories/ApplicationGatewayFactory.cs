@@ -19,6 +19,8 @@ public static class ApplicationGatewayFactory
         List<ApplicationGatewayHttpListenerArgs> httpListeners = [];
         List<ApplicationGatewayBackendHttpSettingsArgs> backendHttpSettingsCollection = [];
         List<ApplicationGatewayRequestRoutingRuleArgs> requestRoutingRules = [];
+
+        Output<string> defaultBackendProbe = Output.Format($"{args.Name}-default-probe");
         
         if (await args.BackendFqdn.CountAsync() > 0)
         {
@@ -62,6 +64,7 @@ public static class ApplicationGatewayFactory
                 new ApplicationGatewayFrontendIPConfigurationArgs
                 {
                     Name =  defaultFrontendIpConfig,
+                    PrivateIPAllocationMethod = IPAllocationMethod.Dynamic,
                     PublicIPAddress = new SubResourceArgs
                     {
                         Id = args.PublicIpAddressId!,
@@ -105,7 +108,12 @@ public static class ApplicationGatewayFactory
                     Protocol = args.BackendProtocol,
                     PickHostNameFromBackendAddress = true,
                     CookieBasedAffinity = "Disabled",
-                    RequestTimeout = args.RequestTimeout
+                    RequestTimeout = args.RequestTimeout,
+                    Probe = new SubResourceArgs
+                    {
+                        Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "probes", defaultBackendProbe)
+                    },
+                    ProbeEnabled = true
                 }
             ];
             
@@ -168,6 +176,7 @@ public static class ApplicationGatewayFactory
                     new ApplicationGatewayFrontendIPConfigurationArgs
                     {
                         Name =  config.Item1,
+                        PrivateIPAllocationMethod = IPAllocationMethod.Dynamic,
                         PublicIPAddress = new SubResourceArgs
                         {
                             Id = config.Item2,
@@ -204,7 +213,12 @@ public static class ApplicationGatewayFactory
                     Path = config.Item3,
                     Protocol = args.BackendProtocol,
                     PickHostNameFromBackendAddress = config.Item4,
-                    RequestTimeout = config.Item5
+                    RequestTimeout = config.Item5,
+                    Probe = new SubResourceArgs
+                    {
+                        Id = BuildResourceId(args.SubscriptionId!, args.ResourceGroupName, args.Name, "probes", defaultBackendProbe)
+                    },
+                    ProbeEnabled = true
                 }).ToList();
             
             requestRoutingRules = args.RequestRoutingRules
@@ -237,7 +251,7 @@ public static class ApplicationGatewayFactory
             {
                 Name =  args.SkuName,
                 Tier =  args.SkuTier,
-                Capacity =   args.SkuCapacity,
+                Capacity =   args.EnableAutoScale ? null: args.SkuCapacity,
                 Family =   args.SkuFamily,
             },
             EnableHttp2 = args.EnableHttp2,
@@ -248,6 +262,28 @@ public static class ApplicationGatewayFactory
             HttpListeners = httpListeners,
             RequestRoutingRules = requestRoutingRules,
             BackendHttpSettingsCollection = backendHttpSettingsCollection,
+            AutoscaleConfiguration = (args.EnableAutoScale ? new ApplicationGatewayAutoscaleConfigurationArgs
+            {
+                MinCapacity = args.MinCapacity,
+                MaxCapacity = args.MaxCapacity
+            }: null)!,
+            Probes = [
+                new ApplicationGatewayProbeArgs
+                {
+                    Name = defaultBackendProbe,
+                    Protocol =  args.Protocol,
+                    Path = "/",
+                    Interval = 30,
+                    Timeout = 30,
+                    UnhealthyThreshold = 3,
+                    PickHostNameFromBackendHttpSettings = true,
+                    MinServers = 0,
+                    Match = new ApplicationGatewayProbeHealthResponseMatchArgs
+                    {
+                        StatusCodes = ["200-399"]
+                    }
+                }
+            ],
             Tags = args.Tags!,
         }, new CustomResourceOptions { Parent = args.Parent });
     }
