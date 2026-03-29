@@ -39,7 +39,9 @@ public static class SubnetFactory
             AddressPrefixes = args.SubnetAddressPrefixes!,
             ResourceGroupName = args.ResourceGroupName,
             NetworkSecurityGroup =  networkSecurityGroup!,
-            Delegations = delegations 
+            Delegations = delegations ,
+            PrivateEndpointNetworkPolicies =  VirtualNetworkPrivateEndpointNetworkPolicies.Disabled,
+            PrivateLinkServiceNetworkPolicies =  VirtualNetworkPrivateLinkServiceNetworkPolicies.Enabled
         }, new CustomResourceOptions { Parent = args.Parent });
     }
 }
