@@ -73,7 +73,6 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags
         });
         
-        //InitializeSecurityGroups(args);
         InitializeVirtualNetwork(args);
         InitializeVault(args);
         InitializeConfigStore(args);
@@ -196,15 +195,23 @@ public class DefaultAppComponent: ComponentResource
             {
                 Ingress = new IngressArgs
                 {
-                    AllowInsecure = false,
+                    AllowInsecure = true,
                     External =  args.External,
                     TargetPort = args.Port,
+                    Transport = IngressTransportMethod.Http,
                     CorsPolicy = new CorsPolicyArgs
                     {
                         AllowedOrigins = args.AllowedOrigins,
                         AllowedHeaders = args.AllowedHeaders,
                         AllowedMethods = args.AllowedMethods
-                    }
+                    },
+                    Traffic = [
+                        new TrafficWeightArgs
+                        {
+                            LatestRevision = true,
+                            Weight = 100
+                        }
+                    ]
                 },
                 Secrets = secretListArgs,
             },
@@ -480,7 +487,6 @@ public class DefaultAppComponent: ComponentResource
                 SubnetAddressPrefixes= subnet.AddressPrefixes!,
                 ResourceGroupName = args.ResourceGroupName,
                 Delegations = subnet.Delegations.Select(delegation => (delegation.Name, delegation.ServiceName)).ToList(),
-                //NetworkSecurityGroupId = _networkSecurityGroup?.Id!,
                 Location = args.Location,
                 Parent = this,
                 Tags = args.Tags
@@ -574,6 +580,24 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags,
         });
 
+        if (!args.External)
+        {
+            _privateEndpoint = PrivateEndpointFactory.Create(new CreatePrivateEndpointArgs
+            {
+                Name = Output.Format($"{args.ParentName}-private-endpoint-{args.Environment}"),
+                Alias = "bookstore",
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                SubnetId = _defaultPrivateEndpointSubnetId!,
+                PrivateLinkServiceId = _managedEnvironment.Id,
+                GroupId = "managedEnvironments",
+                Parent = this,
+                Tags = args.Tags,
+            });
+            
+            staticIp = _privateEndpoint.CustomDnsConfigs.Apply(dnsConfig => dnsConfig.First().IpAddresses.First());
+        }
+        
         var starRecordSet = PrivateRecordSetFactory.Create(new CreateRecordSetArgs
         {
             Alias = "star",
@@ -610,20 +634,6 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags!,
         });
-        
-        _privateEndpoint = PrivateEndpointFactory.Create(new CreatePrivateEndpointArgs
-        {
-            Name = Output.Format($"{args.ParentName}-private-endpoint-{args.Environment}"),
-            Alias = "bookstore",
-            ResourceGroupName = args.ResourceGroupName,
-            Location = args.Location,
-            SubnetId = _defaultPrivateEndpointSubnetId!,
-            //SubnetId = _defaultPrivateSubnetId!,
-            PrivateLinkServiceId = _managedEnvironment.Id,
-            GroupId = "managedEnvironments",
-            Parent = this,
-            Tags = args.Tags,
-        });
 
         _publicIpAddress = PublicIpAddressFactory.Create(new CreatePublicIpAddressArgs
         {
@@ -637,12 +647,13 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags,
         });
-        
-        _applicationGateway = ApplicationGatewayFactory.Create(new CreateApplicationGatewayArgs
+
+        var applicationGatewayArgs = new CreateApplicationGatewayArgs
         {
             Name = Output.Format($"{args.ParentName}-alb-{args.Environment}"),
             SkuName = "Standard_v2",
             SkuTier = "Standard_v2",
+            SkuFamily = "Generation_1",
             ResourceGroupName = args.ResourceGroupName,
             SubscriptionId = args.SubscriptionId,
             Location = args.Location,
@@ -652,20 +663,16 @@ public class DefaultAppComponent: ComponentResource
                 .Apply(items => items.Item1 ?? items.Item2),
             Parent = this,
             Tags = args.Tags,
-        }).Result;
+        };
 
-        _privateLinkService = PrivateLinkServiceFactory.Create(new CreatePrivateLinkServiceArgs
+        if (!args.External)
         {
-            Name = Output.Format($"{args.ParentName}-private-link-service-{args.Environment}"),
-            Alias = "bookstore",
-            SubnetId = _defaultPrivateSubnetId!,
-            FrontendIpConfigurationId = Output.Format(
-                $"/subscriptions/{args.SubscriptionId}/resourceGroups/{args.ResourceGroupName}/providers/Microsoft.Network/applicationGateways/{_applicationGateway.Name}/frontendIPConfigurations/{args.ParentName}-alb-{args.Environment}-frontend-ipconfig"),
-            ResourceGroupName = args.ResourceGroupName,
-            Location = args.Location,
-            Parent = this,
-            Tags = args.Tags,
-        });
+            applicationGatewayArgs.BackendFqdn = [staticIp];
+            applicationGatewayArgs.BackendHostname = Endpoint;
+            applicationGatewayArgs.PickHostNameFromBackendAddress = false;
+        }
+        
+        _applicationGateway = ApplicationGatewayFactory.Create(applicationGatewayArgs).Result;
         
         Endpoint = Output.Format($"http://{_publicIpAddress.DnsSettings.Apply(dns => dns?.Fqdn)}");
     }

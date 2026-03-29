@@ -11,7 +11,7 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public Dictionary<string, string>? Tags { get; init; }
     public required Input<string> Image { get; init; }
     public Input<string> ImageVersion { get; init; } = "latest";
-    public required Input<bool> External { get; init; } = false;
+    public required bool External { get; init; } = false;
     public Input<int> Port { get; init; } = 80;
     public required Input<double> TotalCpu { get; init; }
     public required Input<string> TotalMemory { get; init; }
