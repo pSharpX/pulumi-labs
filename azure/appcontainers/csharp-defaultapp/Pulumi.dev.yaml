@@ -28,31 +28,42 @@ config:
       - "10.1.0.0/16"
     subnets:
       - name: "private-a"
+        tags: 
+          - "private"
         alias: "cluster"
         addressPrefixes: 
-          - "10.0.1.0/24"
-          - "10.0.2.0/24"
-          - "10.0.3.0/24"
-          - "10.0.4.0/24"
+          - "10.1.1.0/24"
         delegations:
           - name: "app-environment"
             serviceName: "Microsoft.App/environments"
       - name: "private-b"
         alias: "database"
+        tags:
+          - "private"
         addressPrefixes:
-          - "10.0.5.0/24"
+          - "10.1.5.0/24"
         delegations:
           - name: "sql-managed-instances"
             serviceName: "Microsoft.Sql/managedInstances"
       - name: "private-c"
         alias: "storage"
+        tags:
+          - "private"
         addressPrefixes:
-          - "10.0.6.0/24"
+          - "10.1.6.0/24"
       - name: "public-a"
-        alias: "gateway"
+        alias: "gateway-ingress"
+        tags:
+          - "public"
         addressPrefixes:
-          - "10.0.10.0/24"
-          - "10.0.11.0/24"
+          - "10.1.10.0/24"
+          - "10.1.11.0/24"
+      - name: "private-d"
+        alias: "private-endpoint"
+        tags:
+          - "private"
+        addressPrefixes:
+          - "10.1.7.0/24"
   csharp-defaultapp:secrets:
     - ["name1", "alias1", "value1"]
     - ["name2", "alias2", "value2"]
@@ -60,20 +71,20 @@ config:
     - [ "name1", "alias1", "value1" ]
     - [ "name2", "alias2", "value2" ]
   csharp-defaultapp:enableProbes: "true"
-  csharp-defaultapp:enableStorage: true
+  csharp-defaultapp:enableStorage: false
   csharp-defaultapp:storageAccountName:
-  csharp-defaultapp:enableVault: true
+  csharp-defaultapp:enableVault: false
   csharp-defaultapp:vaultName:
-  csharp-defaultapp:enableConfigStore: true
+  csharp-defaultapp:enableConfigStore: false
   csharp-defaultapp:configStoreName:  
-  csharp-defaultapp:enableRegistry: true
+  csharp-defaultapp:enableRegistry: false
   csharp-defaultapp:registryName:
-  csharp-defaultapp:enableEncryption: true
+  csharp-defaultapp:enableEncryption: false
   csharp-defaultapp:encryptionKeyName:
-  csharp-defaultapp:enableDatabase: true
-  csharp-defaultapp:databaseUsername: true
-  csharp-defaultapp:databasePassword: true
-  csharp-defaultapp:databaseName: true
+  csharp-defaultapp:enableDatabase: false
+  csharp-defaultapp:databaseUsername: "username"
+  csharp-defaultapp:databasePassword: "password"
+  csharp-defaultapp:databaseName: "database_name"
     
 
 
