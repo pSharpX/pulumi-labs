@@ -1,3 +1,4 @@
+using System.Linq;
 using Pulumi;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.Network.Inputs;
@@ -19,28 +20,24 @@ public static class PrivateEndpointFactory
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
             Tags = args.Tags!,
-        };
+            PrivateLinkServiceConnections = args.PrivateLinkServiceId?
+                .Apply(ids => ids.Select(id => new PrivateLinkServiceConnectionArgs
+                {
+                    Name = Output.Format($"{args.Name}-connection"),
+                    PrivateLinkServiceId = id,
+                    GroupIds =
+                    [
+                        args.GroupId
+                    ]
+                }))!,
 
-        if (!string.IsNullOrEmpty(args.PrivateLinkServiceId))
-        {
-            privateEndpointArgs.PrivateLinkServiceConnections =
-            [
-                new PrivateLinkServiceConnectionArgs
+            IpConfigurations = args.PrivateIpAddresses?.Apply(privateIpAddresses =>
+                privateIpAddresses.Select(ip => new PrivateEndpointIPConfigurationArgs
                 {
-                    PrivateLinkServiceId = args.PrivateLinkServiceId
-                }
-            ];
-        }
-        if (!string.IsNullOrEmpty(args.PrivateIpAddress))
-        {
-            privateEndpointArgs.IpConfigurations =
-            [
-                new PrivateEndpointIPConfigurationArgs
-                {
-                    PrivateIPAddress =  args.PrivateIpAddress,
-                }
-            ];
-        }
+                    PrivateIPAddress = ip,
+                }))!
+        };
+        
         return new PrivateEndpoint($"OneBank_PrivateEndpoint_{args.Alias}", privateEndpointArgs, new CustomResourceOptions { Parent = args.Parent });
     }
 }
