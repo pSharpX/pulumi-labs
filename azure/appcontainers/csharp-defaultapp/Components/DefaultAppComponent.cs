@@ -60,6 +60,10 @@ public class DefaultAppComponent: ComponentResource
     private ImmutableList<Secret>? _secrets;
     
     public Output<string> Endpoint { get; private set; }
+    public Output<string>? DatabaseUrl { get; private set; }
+    public Output<string>? StorageAccountUrl { get; private set; }
+    public Output<string>? ConfigStoreEndpoint { get; private set; }
+    public Output<string>? VaultUri { get; private set; }
 
     public DefaultAppComponent(string name, DefaultAppComponentArgs args, ComponentResourceOptions? options = null) 
         : base("custom:components:DefaultAppComponent", name, options)
@@ -255,14 +259,18 @@ public class DefaultAppComponent: ComponentResource
             },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });
-        
+
         Endpoint = _containerApp.Configuration.Apply(configuration => configuration?.Ingress?.Fqdn!);
 
         InitializePrivateConnection(args);
-        
+
         RegisterOutputs(new Dictionary<string, object?>
         {
-            {"Endpoint", Endpoint}
+            {"Endpoint", Endpoint},
+            {"DatabaseUrl", DatabaseUrl},
+            {"StorageAccountUrl", StorageAccountUrl},
+            {"VaultUri", VaultUri},
+            {"ConfigStoreEndpoint", ConfigStoreEndpoint},
         });
     }
 
@@ -273,6 +281,7 @@ public class DefaultAppComponent: ComponentResource
         if (!string.IsNullOrEmpty(args.VaultName))
         {
             _existentVault = OneBankHelper.GetKeyVault(args.ResourceGroupName, args.VaultName);
+            VaultUri = _existentVault.Apply(props => props.Properties.VaultUri);
              return;
         }
 
@@ -305,6 +314,8 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags
         });
+
+        VaultUri = _vault.Properties.Apply(props => props.VaultUri);
     }
     
     private void InitializeConfigStore(DefaultAppComponentArgs args)
@@ -314,6 +325,7 @@ public class DefaultAppComponent: ComponentResource
         if (!string.IsNullOrEmpty(args.ConfigStoreName))
         {
             _existentConfigStore = OneBankHelper.GetConfigStore(args.ResourceGroupName, args.ConfigStoreName);
+            ConfigStoreEndpoint = _existentConfigStore.Apply(props => props.Endpoint);
             return;
         }
 
@@ -346,6 +358,8 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags
         });
+
+        ConfigStoreEndpoint = _configurationStore.Endpoint;
     }
     
     private void InitializeStorageAccount(DefaultAppComponentArgs args)
@@ -388,23 +402,25 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags
         });
+
+        StorageAccountUrl = _storageAccount.PrimaryEndpoints.Apply(props => props.Blob);
     }
 
     private void InitializeDatabase(DefaultAppComponentArgs args)
     {
         if (!args.EnableDatabase) return;
         
-        if (args.Database is null)
-            throw new ArgumentNullException(nameof(args.Database));
+        if (args.DatabaseConfig is null)
+            throw new ArgumentNullException(nameof(args.DatabaseConfig));
 
         _sqlServer = SqlServerFactory.Create(new CreateSqlServerArgs
         {
             Name = Output.Format($"{args.ParentName}-server-{args.Environment}"),
-            Alias = args.Database!,
+            Alias = args.DatabaseConfig.DatabaseName!,
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
-            AdministratorLogin = args.Username!,
-            AdministratorLoginPassword = args.Password!,
+            AdministratorLogin = args.DatabaseConfig.Username!,
+            AdministratorLoginPassword = args.DatabaseConfig.Password!,
             Parent = this,
             Tags = args.Tags,
         });
@@ -413,12 +429,14 @@ public class DefaultAppComponent: ComponentResource
         {
             Name = Output.Format($"{args.Name}-database-{args.Environment}"),
             ServerName = _sqlServer.Name,
-            Alias = args.Database!,
+            Alias = args.DatabaseConfig.DatabaseName!,
             ResourceGroupName = args.ResourceGroupName,
             Location = args.Location,
             Parent = this,
             Tags = args.Tags,
         });
+
+        DatabaseUrl = _sqlServer.FullyQualifiedDomainName;
     }
 
     private void InitializeVirtualNetwork(DefaultAppComponentArgs args)
@@ -507,7 +525,7 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags
         })).ToList();
-        
+
         _privateSubnets = args.VirtualNetworkConfig.Subnets
             .Where(subnet => subnet.Tags.Contains("private") && !subnet.Alias.Equals("cluster") && !subnet.Alias.Equals("private-endpoint"))
             .Select(subnet => SubnetFactory.Create(new CreateSubnetArgs
@@ -523,7 +541,7 @@ public class DefaultAppComponent: ComponentResource
                 Parent = this,
                 Tags = args.Tags
             })).ToList();
-        
+
         _defaultPrivateSubnetId = clusterSubnet.Id;
         _defaultPublicSubnetId = gatewayIngressSubnet.Id;
         _defaultPrivateEndpointSubnetId = privateEndpointSubnet.Id;
@@ -570,7 +588,7 @@ public class DefaultAppComponent: ComponentResource
 
         var defaultDomain = _managedEnvironment.DefaultDomain;
         var staticIp = _managedEnvironment.StaticIp;
-        
+
         _privateZone = PrivateDnsFactory.Create(new CreateDnsZoneArgs
         {
             Alias = "bookstore",
@@ -580,8 +598,21 @@ public class DefaultAppComponent: ComponentResource
             Tags = args.Tags,
         });
 
-        if (!args.External)
+        if (args.External)
         {
+            _publicIpAddress = PublicIpAddressFactory.Create(new CreatePublicIpAddressArgs
+            {
+                Name = Output.Format($"{args.ParentName}-public-ip-{args.Environment}"),
+                Alias = "bookstore",
+                DnsNameLabel = args.ParentName,
+                SkuName = "Standard",
+                IpAllocationMethod = "Static",
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                Parent = this,
+                Tags = args.Tags,
+            });
+            
             _privateEndpoint = PrivateEndpointFactory.Create(new CreatePrivateEndpointArgs
             {
                 Name = Output.Format($"{args.ParentName}-private-endpoint-{args.Environment}"),
@@ -596,6 +627,27 @@ public class DefaultAppComponent: ComponentResource
             });
             
             staticIp = _privateEndpoint.CustomDnsConfigs.Apply(dnsConfig => dnsConfig.First().IpAddresses.First());
+            
+            var applicationGatewayArgs = new CreateApplicationGatewayArgs
+            {
+                Name = Output.Format($"{args.ParentName}-alb-{args.Environment}"),
+                SkuName = "Standard_v2",
+                SkuTier = "Standard_v2",
+                SkuFamily = "Generation_1",
+                ResourceGroupName = args.ResourceGroupName,
+                SubscriptionId = args.SubscriptionId,
+                Location = args.Location,
+                BackendFqdn = [Endpoint],
+                PublicIpAddressId = _publicIpAddress.Id,
+                SubnetId = Output.Tuple(_defaultPublicSubnetId!, _defaultPrivateSubnetId!)
+                    .Apply(items => items.Item1 ?? items.Item2),
+                Parent = this,
+                Tags = args.Tags,
+            };
+
+            _applicationGateway = ApplicationGatewayFactory.Create(applicationGatewayArgs).Result;
+            
+            Endpoint = Output.Format($"http://{_publicIpAddress.DnsSettings.Apply(dns => dns?.Fqdn)}");
         }
         
         var starRecordSet = PrivateRecordSetFactory.Create(new CreateRecordSetArgs
@@ -634,46 +686,5 @@ public class DefaultAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags!,
         });
-
-        _publicIpAddress = PublicIpAddressFactory.Create(new CreatePublicIpAddressArgs
-        {
-            Name = Output.Format($"{args.ParentName}-public-ip-{args.Environment}"),
-            Alias = "bookstore",
-            DnsNameLabel = args.ParentName,
-            SkuName = "Standard",
-            IpAllocationMethod = "Static",
-            ResourceGroupName = args.ResourceGroupName,
-            Location = args.Location,
-            Parent = this,
-            Tags = args.Tags,
-        });
-
-        var applicationGatewayArgs = new CreateApplicationGatewayArgs
-        {
-            Name = Output.Format($"{args.ParentName}-alb-{args.Environment}"),
-            SkuName = "Standard_v2",
-            SkuTier = "Standard_v2",
-            SkuFamily = "Generation_1",
-            ResourceGroupName = args.ResourceGroupName,
-            SubscriptionId = args.SubscriptionId,
-            Location = args.Location,
-            BackendFqdn = [Endpoint],
-            PublicIpAddressId = _publicIpAddress.Id,
-            SubnetId = Output.Tuple(_defaultPublicSubnetId!, _defaultPrivateSubnetId!)
-                .Apply(items => items.Item1 ?? items.Item2),
-            Parent = this,
-            Tags = args.Tags,
-        };
-
-        if (!args.External)
-        {
-            applicationGatewayArgs.BackendFqdn = [staticIp];
-            applicationGatewayArgs.BackendHostname = Endpoint;
-            applicationGatewayArgs.PickHostNameFromBackendAddress = false;
-        }
-        
-        _applicationGateway = ApplicationGatewayFactory.Create(applicationGatewayArgs).Result;
-        
-        Endpoint = Output.Format($"http://{_publicIpAddress.DnsSettings.Apply(dns => dns?.Fqdn)}");
     }
 }

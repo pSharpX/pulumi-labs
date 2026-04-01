@@ -25,6 +25,7 @@ public class OneBankComponentStack: Stack
         var port = config.RequireInt32("port");
         var isPrivate = config.RequireBoolean("private");
         var vnetConfig = config.RequireObject<VirtualNetworkConfig>("vnetConfig");
+        var databaseConfig = config.RequireObject<DatabaseConfig>("databaseConfig");
         var isExternal = config.RequireBoolean("external");
         var totalCpu = config.RequireDouble("totalCpu");
         var totalMemory = config.Require("totalMemory");
@@ -49,9 +50,6 @@ public class OneBankComponentStack: Stack
         var storageAccountName = config.Get("storageAccountName");
         var enableDatabase = config.RequireBoolean("enableDatabase");
         var databaseEngine = config.Get("databaseEngine");
-        var databaseUsername = config.Get("databaseUsername");
-        var databasePassword = config.Get("databasePassword");
-        var databaseName = config.Get("databaseName");
 
         var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
         _resourceGroup = new ResourceGroup("TeamLvX_rg", new ResourceGroupArgs
@@ -98,15 +96,20 @@ public class OneBankComponentStack: Stack
             RegistryName = registryName,
             EnableDatabase = enableDatabase,
             DatabaseEngine = databaseEngine!,
-            Username = databaseUsername!,
-            Password = databasePassword!,
-            Database = databaseName!,
+            DatabaseConfig = databaseConfig!,
             Tags = tags,
         });
 
         Endpoint = _componentResource.Endpoint;
+        DatabaseUrl = _componentResource.DatabaseUrl ?? Output.Create("");
+        StorageAccountUrl = _componentResource.StorageAccountUrl ?? Output.Create("");
+        ConfigStoreEndpoint = _componentResource.ConfigStoreEndpoint ?? Output.Create("");
+        VaultUri = _componentResource.VaultUri ?? Output.Create("");
     }
-    
-    [Output]
-    public Output<string> Endpoint { get; private set; }
+
+    [Output] public Output<string> Endpoint { get; private set; }
+    [Output] public Output<string>? DatabaseUrl { get; private set; }
+    [Output] public Output<string>? StorageAccountUrl { get; private set; }
+    [Output] public Output<string>? ConfigStoreEndpoint { get; private set; }
+    [Output] public Output<string>? VaultUri { get; private set; }
 }

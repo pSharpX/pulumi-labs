@@ -12,7 +12,7 @@ public abstract class AppComponentArgs
     public required Input<string> ParentName { get; init; }
     public required Input<string> ResourceGroupName { get; init; }
     public Input<string>? Location { get; init; }
-    public string Environment { get; init; } = "dev";
+    public string Environment { get; init; } = "dev"; // dev, qa, staging, prod
     public bool EnableVault { get; init; }
     public string? VaultName { get; init; }
     public bool EnableConfigStore { get; init; }
@@ -24,5 +24,5 @@ public abstract class AppComponentArgs
     public bool EnableEncryption { get; init; }
     public string? EncryptionKeyName { get; init; }
     public bool EnableDatabase { get; init; }
-    public string DatabaseEngine { get; init; } = "mssql";
+    public string DatabaseEngine { get; init; } = "mssql"; // mssql, psql, mysql
 }

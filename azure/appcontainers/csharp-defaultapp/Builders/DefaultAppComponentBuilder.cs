@@ -31,6 +31,7 @@ public class DefaultAppComponentBuilder: IComponentBuilder
         var port = config.RequireInt32("port");
         var isPrivate = config.RequireBoolean("private");
         var vnetConfig = config.RequireObject<VirtualNetworkConfig>("vnetConfig");
+        var databaseConfig = config.RequireObject<DatabaseConfig>("databaseConfig");
         var isExternal = config.RequireBoolean("external");
         var totalCpu = config.RequireDouble("totalCpu");
         var totalMemory = config.Require("totalMemory");
@@ -55,9 +56,6 @@ public class DefaultAppComponentBuilder: IComponentBuilder
         var storageAccountName = config.Get("storageAccountName");
         var enableDatabase = config.RequireBoolean("enableDatabase");
         var databaseEngine = config.Get("databaseEngine");
-        var databaseUsername = config.Get("databaseUsername");
-        var databasePassword = config.Get("databasePassword");
-        var databaseName = config.Get("databaseName");
 
         var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
 
@@ -100,9 +98,7 @@ public class DefaultAppComponentBuilder: IComponentBuilder
             RegistryName = registryName,
             EnableDatabase = enableDatabase,
             DatabaseEngine = databaseEngine!,
-            Username = databaseUsername!,
-            Password = databasePassword!,
-            Database = databaseName!,
+            DatabaseConfig = databaseConfig!,
             Tags = tags,
         };
     }

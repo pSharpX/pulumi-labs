@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Pulumi;
+using Pulumi.AzureNative.Sql;
 
 namespace defaultapp.components;
 
@@ -28,9 +29,17 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public Input<string> Path { get; set; } = "/";
     public Input<int> InitialDelaySeconds { get; set; } = 3;
     public Input<int> PeriodSeconds { get; set; } = 3;
-    public Input<string>? Username { get; init; }
-    public Input<string>? Password { get; init; }
-    public string? Database { get; init; }
+    public DatabaseConfig? DatabaseConfig { get; init; }
+}
+
+public class DatabaseConfig
+{
+    [JsonPropertyName("databaseName")]
+    public string DatabaseName { get; set; } = "";
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = "";
+    [JsonPropertyName("password")]
+    public string Password { get; set; } = "";
 }
 
 public class VirtualNetworkConfig
