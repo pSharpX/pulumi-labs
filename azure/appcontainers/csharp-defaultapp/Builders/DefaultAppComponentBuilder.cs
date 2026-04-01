@@ -3,18 +3,24 @@ using System.Collections.Immutable;
 using System.Linq;
 using defaultapp.components;
 using Pulumi;
-using Pulumi.AzureNative.Resources;
 
-namespace defaultapp;
+namespace defaultapp.Builders;
 
-public class OneBankComponentStack: Stack
+public class DefaultAppComponentBuilder: IComponentBuilder
 {
-    private readonly ResourceGroup _resourceGroup;
-    private readonly DefaultAppComponent _componentResource;
-
-    public OneBankComponentStack()
+    private DefaultAppComponent _componentResource;
+    
+    public InfrastructureResult Build(Config config)
     {
-        var config = new Config("csharp-defaultapp");
+        _componentResource = new DefaultAppComponent("OneBankDefaultAppComponent", BuildArgs(config));
+        return new InfrastructureResult
+        {
+            Application = _componentResource
+        };
+    }
+    
+    private  DefaultAppComponentArgs BuildArgs(Config config)
+    {
         var location = config.Get("location");
         var environment = config.Require("environment");
         var tags = config.RequireObject<Dictionary<string, string>>("tags");
@@ -54,18 +60,14 @@ public class OneBankComponentStack: Stack
         var databaseName = config.Get("databaseName");
 
         var clientConfig = OneBankHelper.GetClientConfigAsync().Result;
-        _resourceGroup = new ResourceGroup("TeamLvX_rg", new ResourceGroupArgs
-        {
-            ResourceGroupName = resourceGroupName,
-            Tags = tags
-        });
-        _componentResource = new DefaultAppComponent("OneBankDefaultAppComponent", new DefaultAppComponentArgs
+
+        return new DefaultAppComponentArgs
         {
             ClientId = clientConfig.ClientId,
             ObjectId = clientConfig.ObjectId,
             TenantId = clientConfig.TenantId,
             SubscriptionId = clientConfig.SubscriptionId,
-            ResourceGroupName = _resourceGroup.Name,
+            ResourceGroupName = resourceGroupName,
             Location = location!,
             Environment = environment,
             Private = isPrivate,
@@ -102,11 +104,6 @@ public class OneBankComponentStack: Stack
             Password = databasePassword!,
             Database = databaseName!,
             Tags = tags,
-        });
-
-        Endpoint = _componentResource.Endpoint;
+        };
     }
-    
-    [Output]
-    public Output<string> Endpoint { get; private set; }
 }
