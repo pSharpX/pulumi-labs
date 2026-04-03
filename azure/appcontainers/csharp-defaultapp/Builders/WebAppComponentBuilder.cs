@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using defaultapp.components;
 using Pulumi;
 using Pulumi.AzureNative.Resources;
@@ -37,8 +39,12 @@ public class WebAppComponentBuilder: IComponentBuilder
         var resourceGroupName = config.Require("resourceGroupName");
         var applicationName = config.Require("applicationName");
         var applicationId = config.Require("applicationId");
-        var imageName = config.Require("imageName");
-        var port = config.RequireInt32("port");
+        var imageName = config.Get("imageName");
+        var repositoryUrl = config.Get("repositoryUrl");
+        var branch = config.Get("branch");
+        var runtime = config.Get("runtime");
+        var startupCommandLine = config.Get("startupCommandLine");
+        var port = config.GetInt32("port");
         var isPrivate = config.RequireBoolean("private");
         var vnetConfig = config.RequireObject<VirtualNetworkConfig>("vnetConfig");
         var databaseConfig = config.RequireObject<DatabaseConfig>("databaseConfig");
@@ -54,6 +60,7 @@ public class WebAppComponentBuilder: IComponentBuilder
         var enableProbes = config.RequireBoolean("enableProbes");
         var secrets = config.GetObject<List< string[]>>("secrets");
         var appConfig = config.GetObject<List< string[]>>("appConfig");
+        var appSettings = config.GetObject<List< string[]>>("appSettings");
         var enableVault = config.RequireBoolean("enableVault");
         var keyVaultName = config.Get("vaultName");
         var enableConfigStore = config.RequireBoolean("enableConfigStore");
@@ -78,16 +85,20 @@ public class WebAppComponentBuilder: IComponentBuilder
             ResourceGroupName = _resourceGroup.Name,
             Location = location!,
             Environment = environment,
-            //Private = isPrivate,
+            Private = isPrivate,
+            External = isExternal,
             //VirtualNetworkConfig = vnetConfig,
-            Image = imageName,
             ParentName = applicationId,
             Name = applicationName,
+            Image = imageName,
+            RepositoryUrl = repositoryUrl,
+            Branch = branch!,
+            Runtime = runtime!,
+            StartupCommandLine = startupCommandLine!,
             /*
             Port = port,
             TotalCpu = totalCpu,
             TotalMemory = totalMemory,
-            External = isExternal,
             EnableScaling = enableScaling,
             MinInstances = minInstances,
             MaxInstances = maxInstances,
@@ -97,9 +108,10 @@ public class WebAppComponentBuilder: IComponentBuilder
             AllowedMethods = allowedMethods,
             AllowedHeaders = allowedHeaders,
             EnableProbes = enableProbes,
+            */
             Secrets = secrets?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
             AppConfig = appConfig?.Select(items => (items[0], items[1], items[2])).ToImmutableList()!,
-            */
+            AppSettings = appSettings?.Select(items => (items[0], items[1])).ToImmutableList()!,
             EnableVault = enableVault,
             VaultName = keyVaultName,
             EnableConfigStore = enableConfigStore,

@@ -20,7 +20,7 @@ public class CreateWebAppArgs: CreateResourceArgs
     public string? HealthCheckPath { get; set; }
     public string? StartupCommandLine { get; set; }
     public string? Runtime { get; set; }
-    public string[] AllowedOrigins { get; set; } = ["*"];
+    public List<string> AllowedOrigins { get; set; } = ["*"];
     public Dictionary<string, string> AppSettings = new();
     public string PublicNetworkAccess { get; set; } = "Enabled"; // Enabled, Disabled
     public bool HttpsOnly { get; set; } = true;

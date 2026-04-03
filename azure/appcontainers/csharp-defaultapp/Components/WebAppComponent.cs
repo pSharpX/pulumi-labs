@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using defaultapp.Factories;
 using Pulumi;
 using Pulumi.AzureNative.AppConfiguration;
@@ -48,19 +49,49 @@ public class WebAppComponent: ComponentResource
             Tags = args.Tags
         });
 
-        _webApp = WebAppFactory.Create(new CreateWebAppArgs
+        var webAppArgs = new CreateWebAppArgs
         {
-            Name =  Output.Format($"{args.ParentName}-{args.Name}-webapp-{args.Environment}"),
+            Name = Output.Format($"{args.ParentName}-{args.Name}-webapp-{args.Environment}"),
             Alias = "bookstore",
             Location = args.Location,
             ResourceGroupName = args.ResourceGroupName,
             ServicePlanId = _appServicePlan.Id,
             ManagedIdentities = [_managedIdentity.Id],
-            ImageName = args.Image,
-            ImageTag = args.ImageVersion,
+            Containerized = false,
+            Runtime = args.Runtime,
+            StartupCommandLine = args.StartupCommandLine,
+            IsLinux = true,
+            HealthCheckPath = args.HealthCheckPath,
+            PublicNetworkAccess = args.Private ? "Enabled" : "Disabled",
+            AllowedOrigins = args.AllowedOrigins,
+            AppSettings = args.AppSettings.ToDictionary(item => item.Item1, item => item.Item2),
+            HttpsOnly = true,
             Parent = this,
             Tags = args.Tags
-        });
+        };
+
+        if (!string.IsNullOrEmpty(args.Image))
+        {
+            webAppArgs.ImageName = args.Image;
+            webAppArgs.ImageTag = args.ImageVersion;
+            webAppArgs.Containerized = true;
+            webAppArgs.Runtime = null;
+            webAppArgs.StartupCommandLine = null;
+        }
+        
+        _webApp = WebAppFactory.Create(webAppArgs);
+
+        if (!string.IsNullOrEmpty(args.RepositoryUrl))
+        {
+            _sourceControl = WebAppSourceControlFactory.Create(new CreateWebAppSourceControlArgs
+            {
+                Alias = "bookstore",
+                Name = _webApp.Name,
+                RepositoryUrl =  args.RepositoryUrl,
+                Branch =  args.Branch,
+                ResourceGroupName = args.ResourceGroupName,
+            });
+        }
 
         Endpoint = Output.Format($"https://{_webApp.DefaultHostName}");
         
