@@ -3,19 +3,31 @@ using System.Collections.Immutable;
 using System.Linq;
 using defaultapp.components;
 using Pulumi;
+using Pulumi.AzureNative.Resources;
+using OutputExtensions = csharp.Shared.OutputExtensions;
 
 namespace defaultapp.Builders;
 
 public class DefaultAppComponentBuilder: IComponentBuilder
 {
+    private ResourceGroup _resourceGroup;
     private DefaultAppComponent _componentResource;
     
-    public InfrastructureResult Build(Config config)
+    public InfrastructureResult Build(BuilderArgs args)
     {
-        _componentResource = new DefaultAppComponent("OneBankDefaultAppComponent", BuildArgs(config));
+        _resourceGroup = args.ResourceGroup;
+        _componentResource = new DefaultAppComponent("OneBankDefaultAppComponent", BuildArgs(args.Config),
+            new ComponentResourceOptions
+            {
+                DependsOn = args.DependsOn!
+            });
         return new InfrastructureResult
         {
-            Application = _componentResource
+            Application = _componentResource,
+            Output = OutputExtensions.CreateDictOutput(new Dictionary<string, Output<string>>()
+            {
+                ["Endpoint"] = _componentResource.Endpoint,
+            })
         };
     }
     
@@ -65,7 +77,7 @@ public class DefaultAppComponentBuilder: IComponentBuilder
             ObjectId = clientConfig.ObjectId,
             TenantId = clientConfig.TenantId,
             SubscriptionId = clientConfig.SubscriptionId,
-            ResourceGroupName = resourceGroupName,
+            ResourceGroupName = _resourceGroup.Name,
             Location = location!,
             Environment = environment,
             Private = isPrivate,

@@ -9,7 +9,7 @@ namespace defaultapp.components;
 public class DefaultAppComponentArgs: AppComponentArgs
 {
     public required bool Private { get; init; }
-    public required Input<string> Image { get; init; }
+    public required string Image { get; init; }
     public Input<string> ImageVersion { get; init; } = "latest";
     public required bool External { get; init; } = false;
     public Input<int> Port { get; init; } = 80;

@@ -17,7 +17,7 @@ namespace defaultapp.Shared;
  */
 public class WebAppRuntimeParser
 {
-    private Dictionary<string, string> _runtimes;
+    private readonly Dictionary<string, string> _runtimes;
     public List<WebAppRuntime> Runtimes { get; set; }
 
     private readonly Dictionary<string, string[]> _validRuntimes = new()

@@ -37,12 +37,12 @@ public static class WebAppFactory
             
             if (args.IsLinux)
             {
-                args.Kind = "app,linux,container";
+                args.Kind = "linux";
                 siteConfig.LinuxFxVersion = $"DOCKER|{args.ImageName}:{args.ImageTag}";
             }
             else
             {
-                args.Kind = "app,container,windows";
+                args.Kind = "windows";
                 siteConfig.WindowsFxVersion = $"DOCKER|{args.ImageName}:{args.ImageTag}";
             }
         }

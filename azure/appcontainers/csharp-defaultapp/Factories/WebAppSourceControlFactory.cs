@@ -13,6 +13,7 @@ public static class WebAppSourceControlFactory
             ResourceGroupName = args.ResourceGroupName,
             Branch = args.Branch,
             RepoUrl = args.RepositoryUrl,
+            IsManualIntegration = true,
         }, new CustomResourceOptions { Parent = args.Parent });
     }
 }

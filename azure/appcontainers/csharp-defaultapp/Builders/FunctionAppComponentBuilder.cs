@@ -1,10 +1,8 @@
-using Pulumi;
-
 namespace defaultapp.Builders;
 
 public class FunctionAppComponentBuilder: IComponentBuilder
 {
-    public InfrastructureResult Build(Config config)
+    public InfrastructureResult Build(BuilderArgs args)
     {
         throw new System.NotImplementedException();
     }

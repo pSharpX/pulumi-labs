@@ -5,5 +5,5 @@ namespace defaultapp;
 
 public interface IComponentBuilder
 {
-    public InfrastructureResult Build(Config config);
+    public InfrastructureResult Build(BuilderArgs args);
 }
