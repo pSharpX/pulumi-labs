@@ -52,13 +52,12 @@ public class WebAppRuntimeParser
 
     private void ValidateRuntime(string runtime, string version)
     {
-        if (GetValidRuntimes().ContainsKey(runtime))
-        {
-            GetValidRuntimes().TryGetValue(runtime, out var validVersions);
-            if (!validVersions.Contains(version))
-                throw new ArgumentException($"Unknown runtime version '{runtime}' '{version}'");
-        }
-        throw new ArgumentException($"Unknown runtime '{runtime}'");
+        if (!GetValidRuntimes().ContainsKey(runtime))
+            throw new ArgumentException($"Unknown runtime '{runtime}'");
+
+        GetValidRuntimes().TryGetValue(runtime, out var validVersions);
+        if (!validVersions.Contains(version))
+            throw new ArgumentException($"Unknown runtime version '{runtime}' '{version}'");
     }
 
     protected virtual Dictionary<string, string[]> GetValidRuntimes()
