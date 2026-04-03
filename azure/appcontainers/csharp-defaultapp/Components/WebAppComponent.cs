@@ -62,7 +62,7 @@ public class WebAppComponent: ComponentResource
             StartupCommandLine = args.StartupCommandLine,
             IsLinux = true,
             HealthCheckPath = args.HealthCheckPath,
-            PublicNetworkAccess = args.Private ? "Enabled" : "Disabled",
+            PublicNetworkAccess = args.Private ? "Disabled" : "Enabled",
             AllowedOrigins = args.AllowedOrigins,
             AppSettings = args.AppSettings.ToDictionary(item => item.Item1, item => item.Item2),
             HttpsOnly = true,
