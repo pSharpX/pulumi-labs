@@ -15,6 +15,8 @@ public abstract class AppComponentArgs
     public Input<string>? Location { get; init; }
     public string Environment { get; init; } = "dev"; // dev, qa, staging, prod
     public Dictionary<string, string>? Tags { get; init; }
+    public bool Private { get; init; }
+    public bool External { get; init; } = true;
     public bool EnableVault { get; init; }
     public string? VaultName { get; init; }
     public bool EnableConfigStore { get; init; }

@@ -8,10 +8,8 @@ namespace defaultapp.components;
 
 public class DefaultAppComponentArgs: AppComponentArgs
 {
-    public required bool Private { get; init; }
     public required string Image { get; init; }
     public Input<string> ImageVersion { get; init; } = "latest";
-    public required bool External { get; init; } = false;
     public Input<int> Port { get; init; } = 80;
     public required Input<double> TotalCpu { get; init; }
     public required Input<string> TotalMemory { get; init; }
@@ -25,7 +23,7 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public List<string> AllowedHeaders { get; init; } = ["*"];
     public List<string> AllowedMethods { get; init; } = ["*"];
     public bool EnableProbes { get; init; } = false;
-    public Input<string> Path { get; set; } = "/";
+    public Input<string> HealthCheckPath { get; set; } = "/";
     public Input<int> InitialDelaySeconds { get; set; } = 3;
     public Input<int> PeriodSeconds { get; set; } = 3;
     public DatabaseConfig? DatabaseConfig { get; init; }

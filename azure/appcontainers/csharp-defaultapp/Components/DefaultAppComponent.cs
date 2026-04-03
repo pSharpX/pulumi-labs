@@ -32,7 +32,6 @@ public class DefaultAppComponent: ComponentResource
 
     private PublicIPAddress? _publicIpAddress;
     private PrivateEndpoint? _privateEndpoint;
-    private PrivateLinkService? _privateLinkService;
     private PrivateZone? _privateZone;
     private ApplicationGateway? _applicationGateway;
     private NetworkSecurityGroup? _networkSecurityGroup;
@@ -174,7 +173,7 @@ public class DefaultAppComponent: ComponentResource
                     HttpGet= new ContainerAppProbeHttpGetArgs
                     {
                         Port = args.Port,
-                        Path = args.Path
+                        Path = args.HealthCheckPath
                     },
                     InitialDelaySeconds = args.InitialDelaySeconds,
                     PeriodSeconds = args.PeriodSeconds,
