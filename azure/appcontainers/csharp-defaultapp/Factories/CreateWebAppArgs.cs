@@ -1,0 +1,27 @@
+using System.Collections.Generic;
+using Pulumi;
+
+namespace defaultapp.Factories;
+
+public class CreateWebAppArgs: CreateResourceArgs
+{
+    public required string Alias { get; set; }
+    public string Kind { get; set; } = "app"; // 'app' | 'app,linux' | 'app,linux,container' | 'hyperV' | 'app,container,windows' | 'app,linux,kubernetes' | 'app,linux,container,kubernetes' | 'functionapp' | 'functionapp,linux' | 'functionapp,linux,container,kubernetes' | 'functionapp,linux,kubernetes'
+    public required Input<string> ServicePlanId { get; set; }
+    public required InputList<string> ManagedIdentities { get; set; }
+    public bool Enabled { get; set; } = true;
+    public bool IsLinux { get; set; } = true;
+    public bool Containerized { get; set; } = true;
+    public string? ImageName { get; set; }
+    public string ImageTag { get; set; } = "latest";
+    public Input<string>? RegistryName { get; set; }
+    public Input<string>? RegistryUsername { get; set; }
+    public Input<string>? RegistryPassword { get; set; }
+    public string? HealthCheckPath { get; set; }
+    public string? StartupCommandLine { get; set; }
+    public string? Runtime { get; set; }
+    public string[] AllowedOrigins { get; set; } = ["*"];
+    public Dictionary<string, string> AppSettings = new();
+    public string PublicNetworkAccess { get; set; } = "Enabled"; // Enabled, Disabled
+    public bool HttpsOnly { get; set; } = true;
+}
