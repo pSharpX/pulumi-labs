@@ -7,13 +7,20 @@ config:
     environment: dev
     provisioner: Pulumi
     technical-owner: TeamLvX
-  csharp-defaultapp:location: eastus
+  csharp-defaultapp:location: westus3
   csharp-defaultapp:resourceGroupName: TeamLvX_rg
-  csharp-defaultapp:private: "true"
+  csharp-defaultapp:componentType: webapp
+  csharp-defaultapp:private: "false"
   csharp-defaultapp:applicationName: bookstore
   csharp-defaultapp:applicationId: onebank
-  csharp-defaultapp:imageName: nginx
-  csharp-defaultapp:imageVersion: latest
+  csharp-defaultapp:imageName:
+  csharp-defaultapp:imageVersion: 
+  
+  csharp-defaultapp:repositoryUrl: "https://github.com/pSharpX/dashboard-catalogo-sismico-igp.git"
+  csharp-defaultapp:branch: main
+  csharp-defaultapp:runtime: "PYTHON|3.12"
+  csharp-defaultapp:startupCommandLine: "streamlit run streamlit_app.py --server.headless true --browser.gatherUsageStats false  --server.port $PORT --server.address 0.0.0.0"
+  
   csharp-defaultapp:port: 80
   csharp-defaultapp:totalCpu: "0.5"
   csharp-defaultapp:totalMemory: "1.0Gi"
@@ -70,6 +77,13 @@ config:
   csharp-defaultapp:appConfig:
     - [ "name1", "alias1", "value1" ]
     - [ "name2", "alias2", "value2" ]
+  csharp-defaultapp:appSettings:
+    - [ "SPRING_PROFILES_ACTIVE", "dev" ]
+    - [ "CONTROL_PLANE_DATABASE_ENABLED", "false" ]
+    - [ "CONTROL_PLANE_CACHE_ENABLED", "false" ]
+    - [ "CONTROL_PLANE_NOTIFICATION_ENABLED", "false" ]
+    - [ "MANAGEMENT_HEALTH_REDIS_ENABLED", "false" ]
+  #  - [ "WEBSITES_PORT", "8080" ]
   csharp-defaultapp:enableProbes: "true"
   csharp-defaultapp:enableStorage: false
   csharp-defaultapp:storageAccountName:
@@ -82,9 +96,10 @@ config:
   csharp-defaultapp:enableEncryption: false
   csharp-defaultapp:encryptionKeyName:
   csharp-defaultapp:enableDatabase: false
-  csharp-defaultapp:databaseUsername: "username"
-  csharp-defaultapp:databasePassword: "password"
-  csharp-defaultapp:databaseName: "database_name"
+  csharp-defaultapp:databaseConfig:
+    databaseName: "bookstore-db"
+    username: "onebank-user"
+    password: "onebank-password"
     
 
 
