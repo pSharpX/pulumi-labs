@@ -13,9 +13,6 @@ public class DefaultAppComponentArgs: AppComponentArgs
     public Input<int> Port { get; init; } = 80;
     public required Input<double> TotalCpu { get; init; }
     public required Input<string> TotalMemory { get; init; }
-    public Input<bool> EnableScaling { get; init; } = false;
-    public Input<int> MinInstances { get; init; } = 1;   
-    public Input<int> MaxInstances { get; init; } = 1;
     public VirtualNetworkConfig? VirtualNetworkConfig { get; init; }
     public ImmutableList<(string, string, string)> Secrets { get; init; } = ImmutableList.Create< (string, string, string)>();
     public ImmutableList<(string, string, string)> AppConfig { get; init; } = ImmutableList.Create< (string, string, string)>();

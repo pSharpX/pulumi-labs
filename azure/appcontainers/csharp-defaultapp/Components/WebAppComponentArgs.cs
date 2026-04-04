@@ -17,4 +17,5 @@ public class WebAppComponentArgs: AppComponentArgs
     public ImmutableList<(string, string)> AppSettings { get; init; } = ImmutableList.Create< (string, string)>();
     public List<string> AllowedOrigins { get; init; } = ["*"];
     public string HealthCheckPath { get; set; } = "/";
+    public VirtualNetworkConfig? VirtualNetworkConfig { get; init; }
 }

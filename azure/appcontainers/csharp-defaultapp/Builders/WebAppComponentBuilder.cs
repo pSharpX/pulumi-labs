@@ -87,7 +87,7 @@ public class WebAppComponentBuilder: IComponentBuilder
             Environment = environment,
             Private = isPrivate,
             External = isExternal,
-            //VirtualNetworkConfig = vnetConfig,
+            VirtualNetworkConfig = vnetConfig,
             ParentName = applicationId,
             Name = applicationName,
             Image = imageName,
@@ -99,10 +99,10 @@ public class WebAppComponentBuilder: IComponentBuilder
             Port = port,
             TotalCpu = totalCpu,
             TotalMemory = totalMemory,
+            */
             EnableScaling = enableScaling,
             MinInstances = minInstances,
             MaxInstances = maxInstances,
-            */
             AllowedOrigins = allowedOrigins,
             /*
             AllowedMethods = allowedMethods,
