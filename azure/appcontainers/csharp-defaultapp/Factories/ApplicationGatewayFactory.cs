@@ -272,7 +272,7 @@ public static class ApplicationGatewayFactory
                 new ApplicationGatewayProbeArgs
                 {
                     Name = defaultBackendProbe,
-                    Protocol =  args.Protocol,
+                    Protocol =  args.BackendProtocol,
                     Path = "/",
                     Interval = 30,
                     Timeout = 30,
