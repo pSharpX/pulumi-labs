@@ -6,7 +6,7 @@ namespace defaultapp.Factories;
 public class CreateWebAppArgs: CreateResourceArgs
 {
     public required string Alias { get; set; }
-    public string Kind { get; set; } = "app"; // 'app' | 'app,linux' | 'app,linux,container' | 'hyperV' | 'app,container,windows' | 'app,linux,kubernetes' | 'app,linux,container,kubernetes' | 'functionapp' | 'functionapp,linux' | 'functionapp,linux,container,kubernetes' | 'functionapp,linux,kubernetes'
+    public string Kind { get; set; } = "app";
     public required Input<string> ServicePlanId { get; set; }
     public required InputList<string> ManagedIdentities { get; set; }
     public bool Enabled { get; set; } = true;

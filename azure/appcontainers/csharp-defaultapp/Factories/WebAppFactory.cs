@@ -12,6 +12,8 @@ public static class WebAppFactory
 {
     public static WebApp Create(CreateWebAppArgs args)
     {
+        args.ValidateWebApp();
+        
         var siteConfig = new SiteConfigArgs
         {
             PublicNetworkAccess = args.PublicNetworkAccess,
@@ -26,8 +28,6 @@ public static class WebAppFactory
 
         if (args.Containerized)
         {
-            if (args.ImageName is null) throw new ArgumentNullException(nameof(args.ImageName));
-
             if (args.RegistryName is null)
             {
                 args.AppSettings.Add("DOCKER_REGISTRY_SERVICE_URL", "https://index.docker.io");
@@ -48,18 +48,16 @@ public static class WebAppFactory
         }
         else
         {
-            if (args.Runtime is null) throw new ArgumentNullException(nameof(args.Runtime));
-            
             if (args.IsLinux)
             {
-                List<WebAppRuntime> runtimes = new WebAppRuntimeParser(args.Runtime).Runtimes;
+                List<WebAppRuntime> runtimes = new WebAppRuntimeParser(args.Runtime!).Runtimes;
 
                 args.Kind = "app,linux";
                 siteConfig.LinuxFxVersion = runtimes.First().ToString();
             }
             else
             {
-                List<WebAppRuntime> runtimes = new WebAppWindowsRuntimeParser(args.Runtime).Runtimes;
+                List<WebAppRuntime> runtimes = new WebAppWindowsRuntimeParser(args.Runtime!).Runtimes;
                 
                 args.Kind = "app";
                 foreach (var runtime in runtimes)
