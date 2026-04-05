@@ -1,4 +1,5 @@
 using System;
+using defaultapp.Shared;
 using Pulumi;
 using Pulumi.AzureNative.Dns;
 using Pulumi.AzureNative.Dns.Inputs;

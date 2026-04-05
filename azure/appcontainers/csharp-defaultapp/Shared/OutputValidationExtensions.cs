@@ -1,7 +1,7 @@
 using System;
 using Pulumi;
 
-namespace defaultapp;
+namespace defaultapp.Shared;
 
 public static class OutputValidationExtensions
 {

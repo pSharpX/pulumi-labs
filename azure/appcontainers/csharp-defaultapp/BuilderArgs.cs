@@ -6,7 +6,7 @@ namespace defaultapp;
 
 public class BuilderArgs
 {
-    public Config Config { get; set; }
+    public required Config Config { get; set; }
     public InputList<Resource>? DependsOn { get; set; }
-    public ResourceGroup ResourceGroup { get; set; }
+    public required ResourceGroup ResourceGroup { get; set; }
 }
