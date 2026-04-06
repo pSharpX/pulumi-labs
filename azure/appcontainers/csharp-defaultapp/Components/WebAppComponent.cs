@@ -3,9 +3,11 @@ using System.Linq;
 using defaultapp.Factories;
 using Pulumi;
 using Pulumi.AzureNative.AppConfiguration;
+using Pulumi.AzureNative.ApplicationInsights;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.ManagedIdentity;
 using Pulumi.AzureNative.Network;
+using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.PrivateDns;
 using Pulumi.AzureNative.Sql;
 using Pulumi.AzureNative.Storage;
@@ -32,6 +34,8 @@ public class WebAppComponent: ComponentResource
     private Output<string>? _defaultPrivateEndpointSubnetId;
     private Output<string>? _defaultPublicSubnetId;
     
+    private readonly Workspace? _workspace;
+    private readonly Component? _applicationInsights;
     private WebAppSourceControl? _sourceControl;
     private Vault? _vault;
     private ConfigurationStore? _configurationStore;
@@ -53,6 +57,30 @@ public class WebAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags
         });
+
+        if (args.EnableInsights)
+        {
+            _workspace = LogAnalyticsWorkspaceFactory.Create(new CreateLogAnalyticsWorkspaceArgs
+            {
+                Name = Output.Format($"{args.ParentName}-cluster-logws-{args.Environment}"),
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                Tags = args.Tags,
+                Parent = this
+            });
+
+            _applicationInsights = ApplicationInsightsFactory.Create(new CreateApplicationInsightsArgs
+            {
+                Name = Output.Format($"{args.ParentName}-appinsights-{args.Environment}"),
+                WorkspaceId = _workspace.Id,
+                ApplicationType = "python",
+                Kind = "python",
+                ResourceGroupName = args.ResourceGroupName,
+                Location = args.Location,
+                Tags = args.Tags,
+                Parent = this,
+            });
+        }
         
         InitializeVirtualNetwork(args);
 
@@ -81,7 +109,11 @@ public class WebAppComponent: ComponentResource
             HealthCheckPath = args.HealthCheckPath,
             PublicNetworkAccess = args.Private ? "Disabled" : "Enabled",
             AllowedOrigins = args.AllowedOrigins,
-            AppSettings = args.AppSettings.ToDictionary(item => item.Item1, item => item.Item2),
+            AppSettings = args.AppSettings.ToDictionary(item => item.Item1, item =>
+            {
+                Input<string> keyValue = item.Item2;
+                return keyValue;
+            }),
             HttpsOnly = true,
             Parent = this,
             Tags = args.Tags
@@ -94,6 +126,14 @@ public class WebAppComponent: ComponentResource
             webAppArgs.Containerized = true;
             webAppArgs.Runtime = null;
             webAppArgs.StartupCommandLine = null;
+        }
+
+        if (args.EnableInsights)
+        {
+            webAppArgs.AppInsightsEnabled = args.EnableInsights;
+            webAppArgs.Stack = args.Stack;
+            webAppArgs.AppInsightsInstrumentationKey = _applicationInsights?.InstrumentationKey!;
+            webAppArgs.AppInsightsConnectionString = _applicationInsights?.ConnectionString!;
         }
         
         _webApp = WebAppFactory.Create(webAppArgs);

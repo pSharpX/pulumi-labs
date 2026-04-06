@@ -17,6 +17,8 @@ public abstract class AppComponentArgs
     public Dictionary<string, string>? Tags { get; init; }
     public bool Private { get; init; }
     public bool External { get; init; } = true;
+    public bool EnableInsights { get; init; }
+    public string? Stack { get; init; }
     public Input<bool> EnableScaling { get; init; } = false;
     public Input<int> MinInstances { get; init; } = 1;   
     public Input<int> MaxInstances { get; init; } = 1;

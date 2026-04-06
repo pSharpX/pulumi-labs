@@ -24,7 +24,41 @@ public static class WebAppFactory
             },
             Http20Enabled = true,
             MinTlsVersion = SupportedTlsVersions.SupportedTlsVersions_1_2,
+            WebSocketsEnabled = args.WebSocketsEnabled,
         };
+
+        if (args.AppInsightsEnabled)
+        {
+            args.AppSettings.Add("APPINSIGHTS_INSTRUMENTATIONKEY", args.AppInsightsInstrumentationKey!);
+            args.AppSettings.Add("APPLICATIONINSIGHTS_CONNECTION_STRING", args.AppInsightsConnectionString!);
+
+            var agentExtensionVersion = args.IsLinux ? "~3" : "~2";
+            switch (args.Stack)
+            {
+                case "python":
+                    args.AppSettings.Add("ApplicationInsightsAgent_EXTENSION_VERSION", "~3");
+                    break;
+                case "java":
+                    args.AppSettings.Add("ApplicationInsightsAgent_EXTENSION_VERSION", agentExtensionVersion);
+                    if (!args.IsLinux)
+                    {
+                        args.AppSettings.Add("XDT_MicrosoftApplicationInsights_Java", "1");
+                    }
+                    break;
+                case "Node.JS":
+                    args.AppSettings.Add("ApplicationInsightsAgent_EXTENSION_VERSION", agentExtensionVersion);
+                    if (!args.IsLinux)
+                    {
+                        args.AppSettings.Add("XDT_MicrosoftApplicationInsights_NodeJS", "1");
+                    }
+                    break;
+                case "web":
+                    args.AppSettings.Add("ApplicationInsightsAgent_EXTENSION_VERSION", agentExtensionVersion);
+                    args.AppSettings.Add("XDT_MicrosoftApplicationInsights_Mode", "recommended");
+                    args.AppSettings.Add("XDT_MicrosoftApplicationInsights_PreemptSdk", "1");
+                    break;
+            }
+        }
 
         if (args.Containerized)
         {

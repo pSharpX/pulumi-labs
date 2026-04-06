@@ -21,7 +21,12 @@ public class CreateWebAppArgs: CreateResourceArgs
     public string? StartupCommandLine { get; set; }
     public string? Runtime { get; set; }
     public List<string> AllowedOrigins { get; set; } = ["*"];
-    public Dictionary<string, string> AppSettings = new();
+    public Dictionary<string, Input<string>> AppSettings = new();
     public string PublicNetworkAccess { get; set; } = "Enabled"; // Enabled, Disabled
     public bool HttpsOnly { get; set; } = true;
+    public bool WebSocketsEnabled  { get; set; }
+    public bool AppInsightsEnabled  { get; set; }
+    public string? Stack { get; set; }
+    public Input<string>? AppInsightsInstrumentationKey { get; set; }
+    public Input<string>? AppInsightsConnectionString { get; set; }
 }

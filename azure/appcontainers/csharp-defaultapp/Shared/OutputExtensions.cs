@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Pulumi;
+using Pulumi.AzureNative.Web.Inputs;
 
 namespace csharp.Shared;
 
@@ -17,6 +18,27 @@ public static class OutputExtensions
             for (var i = 0; i < keys.Length; i++)
             {
                 result[keys[i]] = objs[i];
+            }
+
+            return result;
+        });
+    }
+    
+    public static Output<List<NameValuePairArgs>> CreateNameValuePairOutput(
+        IDictionary<string, Output<string>> inputs)
+    {
+        var keys = inputs.Keys.ToArray();
+        var values = inputs.Values.ToArray();
+        return Output.All(values).Apply(objs =>
+        {
+            var result = new List<NameValuePairArgs>(keys.Length);
+            for (var i = 0; i < keys.Length; i++)
+            {
+                result.Add(new NameValuePairArgs
+                {
+                    Name = keys[i],
+                    Value = objs[i]
+                });
             }
 
             return result;

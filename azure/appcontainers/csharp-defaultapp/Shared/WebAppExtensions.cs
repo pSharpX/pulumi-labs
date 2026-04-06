@@ -47,7 +47,7 @@ public static class WebAppExtensions
             }
 
             args.EnvironmentId?.Ensure(env => !string.IsNullOrEmpty(env),
-                $"invalid environmentId - cannit be empty");
+                $"invalid environmentId - cannot be empty");
         }
 
         if (!IsValidKind(args.Kind))
@@ -80,6 +80,19 @@ public static class WebAppExtensions
         if (!IsValidKind(args.Kind))
         {
             throw new ArgumentNullException($"invalid kind '{args.Kind}'");
+        }
+
+        if (args.AppInsightsEnabled)
+        {
+            if (args.Stack is null)
+            {
+                throw new ArgumentNullException($"invalid parameter '{nameof(args.Stack)}'");
+            }
+            
+            args.AppInsightsConnectionString?.Ensure(env => !string.IsNullOrEmpty(env),
+                $"invalid connectionString - cannot be empty");
+            args.AppInsightsInstrumentationKey?.Ensure(env => !string.IsNullOrEmpty(env),
+                $"invalid connectionString - cannot be empty");
         }
     }
 

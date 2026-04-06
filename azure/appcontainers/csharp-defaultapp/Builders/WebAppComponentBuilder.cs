@@ -51,6 +51,8 @@ public class WebAppComponentBuilder: IComponentBuilder
         var isExternal = config.RequireBoolean("external");
         var totalCpu = config.RequireDouble("totalCpu");
         var totalMemory = config.Require("totalMemory");
+        var enableInsights = config.RequireBoolean("enableInsights");
+        var stack = config.Get("stack");
         var enableScaling = config.RequireBoolean("enableScaling");
         var minInstances = config.RequireInt32("minInstances");
         var maxInstances =  config.RequireInt32("maxInstances");
@@ -100,6 +102,8 @@ public class WebAppComponentBuilder: IComponentBuilder
             TotalCpu = totalCpu,
             TotalMemory = totalMemory,
             */
+            EnableInsights = enableInsights,
+            Stack = stack,
             EnableScaling = enableScaling,
             MinInstances = minInstances,
             MaxInstances = maxInstances,
