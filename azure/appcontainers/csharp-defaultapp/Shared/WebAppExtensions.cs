@@ -24,6 +24,21 @@ public static class WebAppExtensions
     private static readonly List<string> IsolatedPlans =
         ["I1v2", "I1mv2", "I2v2", "I2mv2", "I3v2", "I3mv2", "I4v2", "I4mv2", "I5v2", "I5mv2", "I6v2"];
     
+    private static readonly List<string> FreePlans =
+        ["D1", "F1"];
+    
+    private static readonly List<string> BasicPlans =
+        ["B1", "B2", "B3"];
+
+    private static readonly List<string> StandardPlans =
+        ["S1", "S2", "S3"];
+
+    private static readonly List<string> PremiumPlans =
+    [
+        "P1v2", "P2v2", "P3v2", "P0v3", "P1v3", "P2v3", "P3v3", "P1mv3", "P2mv3",
+        "P3mv3", "P4mv3", "P5mv3", "P0v4", "P1v4", "P2v4", "P3v4", "P1mv4", "P2mv4", "P3mv4", "P4mv4", "P5mv4"
+    ];
+    
     private static readonly List<string> FunctionOnlyPlans =
         ["Y1", "FC1", "EP1", "EP2", "EP3"];
     
@@ -54,6 +69,32 @@ public static class WebAppExtensions
         {
             throw new ArgumentNullException($"invalid kind '{args.Kind}'");
         }
+    }
+
+    public static string GetPlanBasedOnEnvironment(string env)
+    {
+        return env switch
+        {
+            "prod" or "cert" => PremiumPlans.First(),
+            "sandbox" or "staging" or "uat" => BasicPlans.First(),
+            "qa" or "int" => StandardPlans.First(),
+            _ => BasicPlans.First()
+        };
+    }
+    
+    public static bool CanEnableManulAutoscaling(this CreateAppServicePlanArgs args)
+    {
+        return !IsFreePlan(args.SkuName);
+    }
+    
+    public static bool CanEnableRuleBasedAutoscaling(this CreateAppServicePlanArgs args)
+    {
+        return !IsFreePlan(args.SkuName) && !IsBasicPlan(args.SkuName);
+    }
+    
+    public static bool CanEnableAutomaticAutoscaling(this CreateAppServicePlanArgs args)
+    {
+        return IsPremiumPlan(args.SkuName);
     }
     
     public static void ValidateWebApp(this CreateWebAppArgs args)
@@ -99,6 +140,10 @@ public static class WebAppExtensions
     private static bool IsValidPlan(string plan) => AllPlans.Contains(plan);
     private static bool IsValidIsolatedPlan(string plan) => IsolatedPlans.Contains(plan);
     private static bool IsValidFunctionPlan(string plan) => FunctionOnlyPlans.Contains(plan);
+    private static bool IsFreePlan(string plan) => FreePlans.Contains(plan);
+    private static bool IsBasicPlan(string plan) => BasicPlans.Contains(plan);
+    private static bool IsStandardPlan(string plan) => StandardPlans.Contains(plan);
+    private static bool IsPremiumPlan(string plan) => PremiumPlans.Contains(plan);
 
     private static bool IsValidKind(string plan)
     {
