@@ -6,6 +6,7 @@ namespace defaultapp.components;
 
 public class WebAppComponentArgs: AppComponentArgs
 {
+    public string? Tier { get; init; }
     public string? Image { get; init; }
     public string ImageVersion { get; init; } = "latest";
     public string? RepositoryUrl { get; init; }

@@ -22,6 +22,7 @@ public abstract class AppComponentArgs
     public Input<bool> EnableScaling { get; init; } = false;
     public Input<int> MinInstances { get; init; } = 1;   
     public Input<int> MaxInstances { get; init; } = 1;
+    public bool EnableGpu { get; init; }
     public bool EnableVault { get; init; }
     public string? VaultName { get; init; }
     public bool EnableConfigStore { get; init; }

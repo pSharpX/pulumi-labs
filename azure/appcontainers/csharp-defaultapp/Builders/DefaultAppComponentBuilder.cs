@@ -47,6 +47,7 @@ public class DefaultAppComponentBuilder: IComponentBuilder
         var isExternal = config.RequireBoolean("external");
         var totalCpu = config.RequireDouble("totalCpu");
         var totalMemory = config.Require("totalMemory");
+        var enableGpu = config.GetBoolean("enableGpu");
         var enableScaling = config.RequireBoolean("enableScaling");
         var minInstances = config.RequireInt32("minInstances");
         var maxInstances =  config.RequireInt32("maxInstances");
@@ -89,6 +90,7 @@ public class DefaultAppComponentBuilder: IComponentBuilder
             TotalCpu = totalCpu,
             TotalMemory = totalMemory,
             External = isExternal,
+            EnableGpu = enableGpu ?? false,
             EnableScaling = enableScaling,
             MinInstances = minInstances,
             MaxInstances = maxInstances,

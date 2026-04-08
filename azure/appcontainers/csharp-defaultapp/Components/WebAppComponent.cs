@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using defaultapp.Factories;
+using defaultapp.Shared;
 using Pulumi;
 using Pulumi.AzureNative.AppConfiguration;
 using Pulumi.AzureNative.ApplicationInsights;
@@ -87,7 +88,7 @@ public class WebAppComponent: ComponentResource
         _appServicePlan = AppServicePlanFactory.Create(new CreateAppServicePlanArgs
         {
             Name =  Output.Format($"{args.ParentName}-managed-plan-{args.Environment}"),
-            SkuName = "B1",
+            SkuName = args.Tier ?? WebAppExtensions.GetPlanBasedOnEnvironment(args.Environment),
             Location = args.Location,
             ResourceGroupName = args.ResourceGroupName,
             Parent =  this,

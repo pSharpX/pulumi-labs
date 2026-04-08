@@ -53,6 +53,7 @@ public class WebAppComponentBuilder: IComponentBuilder
         var totalMemory = config.Require("totalMemory");
         var enableInsights = config.RequireBoolean("enableInsights");
         var stack = config.Get("stack");
+        var enableGpu = config.GetBoolean("enableGpu");
         var enableScaling = config.RequireBoolean("enableScaling");
         var minInstances = config.RequireInt32("minInstances");
         var maxInstances =  config.RequireInt32("maxInstances");
@@ -104,6 +105,7 @@ public class WebAppComponentBuilder: IComponentBuilder
             */
             EnableInsights = enableInsights,
             Stack = stack,
+            EnableGpu = enableGpu ?? false,
             EnableScaling = enableScaling,
             MinInstances = minInstances,
             MaxInstances = maxInstances,
