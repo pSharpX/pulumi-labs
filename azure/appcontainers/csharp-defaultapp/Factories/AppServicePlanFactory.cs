@@ -42,8 +42,10 @@ public static class AppServicePlanFactory
                 Name = args.SkuName,
                 SkuCapacity = new SkuCapacityArgs
                 {
+                    Default = args.MaxInstances,
                     Maximum = args.MaxInstances,
                     Minimum = args.MinInstances,
+                    
                 }
             };
         }
