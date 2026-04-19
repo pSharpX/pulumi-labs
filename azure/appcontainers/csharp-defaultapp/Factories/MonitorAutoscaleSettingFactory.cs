@@ -37,18 +37,18 @@ public static class MonitorAutoscaleSettingFactory
                         MetricName = rule.Trigger.MetricName,
                         MetricResourceUri = rule.Trigger.MetricResourceUri,
                         MetricNamespace =  rule.Trigger.MetricNamespace,
-                        Operator = Enum.Parse<ComparisonOperationType>(rule.Trigger.Operator),
-                        Statistic = Enum.Parse<MetricStatisticType>(rule.Trigger.Statistic),
+                        Operator = rule.Trigger.ParseOperator,
+                        Statistic = rule.Trigger.ParseStatistic,
                         Threshold = rule.Trigger.Threshold,
-                        TimeAggregation = Enum.Parse<TimeAggregationType>(rule.Trigger.TimeAggregation),
+                        TimeAggregation = rule.Trigger.ParseTimeAggregation,
                         TimeGrain = rule.Trigger.TimeGrain,
                         TimeWindow = rule.Trigger.TimeWindow
                     },
                     ScaleAction = new ScaleActionArgs
                     {
                         Cooldown = rule.Action.Cooldown,
-                        Direction = Enum.Parse<ScaleDirection>(rule.Action.Direction),
-                        Type = Enum.Parse<ScaleType>(rule.Action.Type),
+                        Direction = rule.Action.ParseDirection,
+                        Type = rule.Action.ParseType,
                         Value = rule.Action.Value
                     }
                 }).ToList()

@@ -7,6 +7,7 @@ using Pulumi.AzureNative.AppConfiguration;
 using Pulumi.AzureNative.ApplicationInsights;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.ManagedIdentity;
+using Pulumi.AzureNative.Monitor;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.PrivateDns;
@@ -35,8 +36,9 @@ public class WebAppComponent: ComponentResource
     private Output<string>? _defaultPrivateEndpointSubnetId;
     private Output<string>? _defaultPublicSubnetId;
     
-    private readonly Workspace? _workspace;
-    private readonly Component? _applicationInsights;
+    private Workspace? _workspace;
+    private Component? _applicationInsights;
+    private AutoscaleSetting _autoscaleSetting;
     private WebAppSourceControl? _sourceControl;
     private Vault? _vault;
     private ConfigurationStore? _configurationStore;
@@ -164,6 +166,7 @@ public class WebAppComponent: ComponentResource
 
         Endpoint = _webApp.DefaultHostName;
         
+        InitializeAutoscaling(args);
         InitializePrivateConnection(args);
         
         RegisterOutputs(new Dictionary<string, object?>
@@ -335,7 +338,7 @@ public class WebAppComponent: ComponentResource
                 ResourceGroupName = args.ResourceGroupName,
                 SubscriptionId = args.SubscriptionId,
                 Location = args.Location,
-                BackendFqdn = [Endpoint],//[Endpoint],
+                BackendFqdn = [Endpoint],
                 PublicIpAddressId = _publicIpAddress.Id,
                 BackendPort = 443,
                 BackendProtocol =  "Https",
@@ -386,5 +389,14 @@ public class WebAppComponent: ComponentResource
             Parent = this,
             Tags = args.Tags!,
         });
+    }
+
+    private void InitializeAutoscaling(WebAppComponentArgs args)
+    {
+        if (!args.EnableScaling)
+            return;
+
+        _autoscaleSetting = MonitorAutoscaleSettingFactory.Create(CreateMonitorAutoscaleSettingArgs.DefaultAppServiceAutoscaleSetting("bookstore", Output.Format($"{args.ParentName}-managed-plan-autoscaling-{args.Environment}"),
+            args.ResourceGroupName, _appServicePlan.Id, args.Location!, args.Tags!, this));
     }
 }

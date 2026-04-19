@@ -81,7 +81,7 @@ public class LegacyAppComponent: ComponentResource
                         }
                     }
                 },
-                Scale = args.EnableScaling.Apply(scaling => scaling ? new ScaleArgs
+                Scale = args.EnableScaling ? new ScaleArgs
                 {
                     MinReplicas = args.MinInstances,
                     MaxReplicas = args.MaxInstances,
@@ -100,7 +100,7 @@ public class LegacyAppComponent: ComponentResource
                             
                         }
                     }
-                }: null)! 
+                }: null! 
             },
             Tags = args.Tags!
         }, new CustomResourceOptions { Parent = this });
